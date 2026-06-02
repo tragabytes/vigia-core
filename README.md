@@ -20,7 +20,7 @@ la watchlist de organismos, el branding y las fuentes propias viven en un
 
 ## Instalación
 
-    pip install git+https://github.com/tragabytes/vigia-core.git@v0.3.0
+    pip install git+https://github.com/tragabytes/vigia-core.git@v0.4.0
 
 Requiere Python >= 3.9. Cada bot debe fijar `VIGIA_STATE_DIR` para que la BD de
 estado (`seen.db`) viva en su propio directorio/rama `state`.
