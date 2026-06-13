@@ -19,6 +19,7 @@ from vigia.sources.ciemat import CIEMATSource
 from vigia.sources.comunidad_madrid import ComunidadMadridSource
 from vigia.sources.csic_sede import CSICSedeSource
 from vigia.sources.datos_madrid import DatosMadridSource
+from vigia.sources.epreselec import EpreselecSource
 from vigia.sources.iac import IACSource
 from vigia.sources.las_rozas import LasRozasSource
 from vigia.sources.metro_madrid import MetroMadridSource
@@ -40,6 +41,7 @@ CORE_SOURCES = {
     "ciemat": CIEMATSource,
     "universidades_madrid": UniversidadesMadridSource,
     "sap_successfactors": SapSuccessfactorsSource,
+    "epreselec": EpreselecSource,
     "las_rozas": LasRozasSource,
     "aena": AENASource,
     "iac": IACSource,
