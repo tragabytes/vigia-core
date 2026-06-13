@@ -30,6 +30,9 @@ origen y el usuario reconoce de qué proceso viene la alerta.
 Sources excluidos (`EXCLUDED_SOURCES`):
 - BOE/BOCM/CODEM: el item ES el detalle, no hay sub-página dinámica que vigilar.
 - BOAM/Ayto Madrid/Metro Madrid/Administración GOB: stubs por WAF, GET fallará.
+- `ciemat`: el cert de www.ciemat.es no envía el intermedio, así que el GET
+  genérico (verify=True por defecto) revienta con SSLError en cada run. La
+  fuente está además desactivada en el perfil; excluirla aquí evita el ruido.
 - Hash-watchers dedicados (`cm_ficha_enfermeria`, `isciii`,
   `canal_isabel_ii_calendario`): ya emiten sus propios snapshots con selector
   específico — vigilarlos otra vez aquí duplicaría snapshots ruidosos.
@@ -68,13 +71,18 @@ DEFAULT_BODY_SELECTORS = (
 )
 
 # Sources cuyo `url` original ya es el detalle (no hay sub-página que
-# evolucione), o que sabemos bloqueados por WAF, o que ya tienen
-# hash-watcher dedicado.
+# evolucione), o que sabemos bloqueados por WAF, o cuyo GET genérico falla
+# siempre, o que ya tienen hash-watcher dedicado.
 EXCLUDED_SOURCES = frozenset({
     # item == detalle (no aporta vigilar de nuevo):
     "boe", "bocm", "codem", "datos_madrid",
     # WAF / stubs:
     "boam", "ayuntamiento_madrid", "metro_madrid", "administracion_gob",
+    # GET genérico inviable: el cert de www.ciemat.es no envía el intermedio,
+    # así que el GET con verify=True (default) revienta con SSLError en cada
+    # run. La fuente ciemat está además desactivada (ver _default_profile);
+    # esto evita el ruido SSL del watcher sobre ofertas ciemat ya guardadas.
+    "ciemat",
     # hash-watchers dedicados (ya emiten sus snapshots):
     "cm_ficha_enfermeria", "isciii", "canal_isabel_ii_calendario",
 })
