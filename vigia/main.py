@@ -19,7 +19,7 @@ import argparse
 import logging
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from vigia import dashboard, diff_summarizer, enricher, maintenance
@@ -339,6 +339,34 @@ def main() -> None:
     except Exception as exc:
         logger.warning("No se pudo exportar el dashboard: %s", exc)
 
+    # --- Fase 3.7: Recordatorios de cierre de plazo ---
+    # Re-avisa de convocatorias YA conocidas y abiertas cuyo deadline cae en
+    # uno de los umbrales del perfil (p.ej. 7/3/1 días), una sola vez por
+    # umbral (registro idempotente en `deadline_reminders`). Lee de BD, así
+    # que necesita el storage abierto; no aplica en dry_run (retorna antes).
+    today = date.today()
+    reminders: list = []
+    thresholds = tuple(get_active_profile().deadline_reminder_days)
+    if thresholds:
+        max_t = max(thresholds)
+        now_iso = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+        for rem in storage.iter_items_with_open_deadline(today):
+            try:
+                days_left = (date.fromisoformat(rem.deadline_inscripcion) - today).days
+            except (ValueError, TypeError):
+                continue
+            if days_left < 0 or days_left > max_t:
+                continue
+            due = {t for t in thresholds if days_left <= t}
+            pending = due - storage.get_sent_reminder_thresholds(rem.id_hash)
+            if pending:
+                rem.days_left = days_left
+                reminders.append(rem)
+                for t in pending:
+                    storage.mark_reminder_sent(rem.id_hash, t, now_iso)
+        if reminders:
+            logger.info("Recordatorios de cierre de plazo: %d", len(reminders))
+
     storage.close()
 
     # --- Fase 4: Notificación ---
@@ -361,8 +389,13 @@ def main() -> None:
             discarded,
         )
 
-    if notifiable or errors:
-        send(notifiable, errors)
+    if notifiable or errors or reminders:
+        # `reminders` se pasa solo cuando hay alguno, para no alterar la firma
+        # esperada por notifiers mockeados en tests que no lo contemplan.
+        if reminders:
+            send(notifiable, errors, run_date=today, reminders=reminders)
+        else:
+            send(notifiable, errors)
     else:
         logger.info("Sin novedades relevantes hoy — no se envía notificación Telegram")
 

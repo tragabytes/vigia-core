@@ -129,6 +129,24 @@ def _make_hash(source: str, url: str, titulo: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
+@dataclass
+class DeadlineReminder:
+    """Candidato a recordatorio de cierre de plazo.
+
+    Estructura ligera (no un `Item` completo) con lo justo que el notifier
+    necesita para avisar de que una convocatoria abierta está a punto de
+    cerrar. `days_left` lo rellena `main.py` tras decidir que toca avisar
+    (el storage solo aporta los datos persistidos).
+    """
+    id_hash: str
+    titulo: str
+    url: str
+    deadline_inscripcion: str          # YYYY-MM-DD
+    organismo: Optional[str] = None
+    url_inscripcion: Optional[str] = None
+    days_left: int = 0                 # rellenado por main.py
+
+
 # Columnas v2 a añadir si no existen. (nombre_sql, tipo_sql).
 _V2_COLUMNS: list[tuple[str, str]] = [
     ("is_relevant",                "INTEGER"),
@@ -214,6 +232,17 @@ class Storage:
                 last_hash       TEXT NOT NULL,
                 last_body       TEXT NOT NULL,
                 last_checked_at TEXT NOT NULL
+            )
+        """)
+        # Tabla deadline_reminders: control idempotente de los recordatorios
+        # de cierre de plazo ya enviados. Una fila por (item, umbral de días),
+        # para no re-avisar del mismo umbral en runs sucesivos.
+        self._conn.execute("""
+            CREATE TABLE IF NOT EXISTS deadline_reminders (
+                id_hash   TEXT NOT NULL,
+                threshold INTEGER NOT NULL,
+                sent_at   TEXT NOT NULL,
+                PRIMARY KEY (id_hash, threshold)
             )
         """)
         self._conn.commit()
@@ -516,6 +545,72 @@ class Storage:
             (*excluded, today_iso, cutoff_first_seen),
         )
         return [(row[0], row[1], row[2]) for row in cur]
+
+    # ------------------------------------------------------------------
+    # deadline_reminders — recordatorios de cierre de plazo
+    # ------------------------------------------------------------------
+
+    def iter_items_with_open_deadline(
+        self, today: Optional[date] = None
+    ) -> list[DeadlineReminder]:
+        """Devuelve los items con `deadline_inscripcion` aún abierto (>= hoy)
+        y relevantes (o sin clasificar), como `DeadlineReminder`.
+
+        Excluye los marcados como falsos positivos (`is_relevant = 0`). El
+        cálculo de `days_left` y la decisión de qué umbral avisar viven en
+        `main.py`; aquí solo se filtra por deadline futuro.
+        """
+        if today is None:
+            today = date.today()
+        cur = self._conn.execute(
+            """
+            SELECT id_hash, titulo, url, organismo, url_inscripcion,
+                   deadline_inscripcion
+            FROM items
+            WHERE deadline_inscripcion IS NOT NULL
+              AND deadline_inscripcion >= ?
+              AND (is_relevant IS NULL OR is_relevant = 1)
+            ORDER BY deadline_inscripcion ASC
+            """,
+            (today.isoformat(),),
+        )
+        return [
+            DeadlineReminder(
+                id_hash=row[0],
+                titulo=row[1],
+                url=row[2],
+                organismo=row[3],
+                url_inscripcion=row[4],
+                deadline_inscripcion=row[5],
+            )
+            for row in cur
+        ]
+
+    def get_sent_reminder_thresholds(self, id_hash: str) -> set[int]:
+        """Conjunto de umbrales (días) ya avisados para un item."""
+        cur = self._conn.execute(
+            "SELECT threshold FROM deadline_reminders WHERE id_hash = ?",
+            (id_hash,),
+        )
+        return {row[0] for row in cur}
+
+    def mark_reminder_sent(
+        self, id_hash: str, threshold: int, sent_at: str
+    ) -> None:
+        """Registra que ya se avisó del umbral `threshold` para `id_hash`.
+
+        Idempotente (`INSERT OR IGNORE` sobre la PK compuesta). El timestamp
+        es del llamador, igual que en `detail_snapshots`, para tests
+        deterministas.
+        """
+        self._conn.execute(
+            """
+            INSERT OR IGNORE INTO deadline_reminders (id_hash, threshold, sent_at)
+            VALUES (?, ?, ?)
+            """,
+            (id_hash, threshold, sent_at),
+        )
+        self._conn.commit()
 
     # ------------------------------------------------------------------
     # detail_snapshots — estado del DetailWatcher genérico

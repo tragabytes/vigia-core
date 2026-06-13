@@ -55,6 +55,11 @@ class Profile:
         "oposicion", "bolsa", "concurso_traslados", "interinaje", "temporal", "otro",
     )
 
+    # --- Recordatorios de cierre de plazo ---
+    # Días antes del cierre en los que se re-avisa de una convocatoria abierta
+    # (un único aviso por umbral). Vacío = desactiva los recordatorios.
+    deadline_reminder_days: tuple[int, ...] = (7, 3, 1)
+
 
 # ---------------------------------------------------------------------------
 # Registro del perfil activo (un perfil por proceso)
