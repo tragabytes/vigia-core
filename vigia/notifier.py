@@ -149,7 +149,8 @@ def _format_reminder(rem: DeadlineReminder) -> list[str]:
     block = [head, f"<b>{_escape(rem.titulo)}</b>"]
     try:
         fecha_es = date.fromisoformat(rem.deadline_inscripcion).strftime("%d/%m/%Y")
-        block.append(f"📅 Cierre: {fecha_es}")
+        sufijo = " (estimada)" if rem.deadline_estimated else ""
+        block.append(f"📅 Cierre: {fecha_es}{sufijo}")
     except (ValueError, TypeError):
         pass
     link = rem.url_inscripcion or rem.url
@@ -195,7 +196,10 @@ def _format_item(item: Item, today: date) -> list[str]:
 
     # Cierre con countdown
     if item.deadline_inscripcion:
-        countdown = _format_countdown(item.deadline_inscripcion, today)
+        countdown = _format_countdown(
+            item.deadline_inscripcion, today,
+            estimated=bool(item.deadline_estimated),
+        )
         if countdown:
             block.append(f"⏰ {_escape(countdown)}")
 
@@ -237,21 +241,27 @@ def _format_item(item: Item, today: date) -> list[str]:
     return block
 
 
-def _format_countdown(deadline_iso: str, today: date) -> Optional[str]:
-    """Devuelve 'Cierre: DD/MM/YYYY (en N días)' o variantes según signo."""
+def _format_countdown(
+    deadline_iso: str, today: date, estimated: bool = False
+) -> Optional[str]:
+    """Devuelve 'Cierre: DD/MM/YYYY (en N días)' o variantes según signo.
+    Si `estimated`, añade '(estimada)' — el plazo se calculó de una expresión
+    relativa, no de una fecha escrita literalmente."""
     try:
         dl = date.fromisoformat(deadline_iso)
-    except ValueError:
+    except (ValueError, TypeError):
         return None
     days = (dl - today).days
     fecha_es = dl.strftime("%d/%m/%Y")
     if days < 0:
-        return f"Cierre: {fecha_es} (cerrado hace {-days} días)"
-    if days == 0:
-        return f"Cierre: {fecha_es} (HOY)"
-    if days == 1:
-        return f"Cierre: {fecha_es} (mañana)"
-    return f"Cierre: {fecha_es} (en {days} días)"
+        base = f"Cierre: {fecha_es} (cerrado hace {-days} días)"
+    elif days == 0:
+        base = f"Cierre: {fecha_es} (HOY)"
+    elif days == 1:
+        base = f"Cierre: {fecha_es} (mañana)"
+    else:
+        base = f"Cierre: {fecha_es} (en {days} días)"
+    return base + " — fecha estimada" if estimated else base
 
 
 def _format_eur(amount: float) -> str:

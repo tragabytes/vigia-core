@@ -58,7 +58,12 @@ else:
 # BD llegaban con raw_text vacío (no se persiste) y los snippets no
 # tenían sobre qué actuar. Cierra el bug definitivamente — Policía
 # Nacional tampoco se rescató en v4 por este motivo.
-ENRICHMENT_VERSION = 5
+# v6 (2026-06-13): el enricher inyecta snippets de la sección de PLAZO y el
+# system prompt calcula plazos relativos ("N días hábiles desde la publicación")
+# a fecha absoluta (marcándolos `deadline_estimated`). Subir a 6 fuerza el
+# re-enriquecimiento del histórico en `maintenance.yml` para subir la tasa de
+# extracción de `deadline_inscripcion` (que alimenta los recordatorios).
+ENRICHMENT_VERSION = 6
 
 
 @dataclass
@@ -90,6 +95,7 @@ class Item:
     centro: Optional[str] = None
     plazas: Optional[int] = None
     deadline_inscripcion: Optional[str] = None    # YYYY-MM-DD
+    deadline_estimated: Optional[bool] = None     # True = fecha calculada de un plazo relativo (no escrita literalmente)
     fecha_publicacion_oficial: Optional[str] = None
     tasas_eur: Optional[float] = None
     url_bases: Optional[str] = None
@@ -144,6 +150,7 @@ class DeadlineReminder:
     deadline_inscripcion: str          # YYYY-MM-DD
     organismo: Optional[str] = None
     url_inscripcion: Optional[str] = None
+    deadline_estimated: bool = False   # True = fecha calculada de un plazo relativo
     days_left: int = 0                 # rellenado por main.py
 
 
@@ -156,6 +163,7 @@ _V2_COLUMNS: list[tuple[str, str]] = [
     ("centro",                     "TEXT"),
     ("plazas",                     "INTEGER"),
     ("deadline_inscripcion",       "TEXT"),
+    ("deadline_estimated",         "INTEGER"),  # 1 = fecha calculada de plazo relativo
     ("fecha_publicacion_oficial",  "TEXT"),
     ("tasas_eur",                  "REAL"),
     ("url_bases",                  "TEXT"),
@@ -325,6 +333,7 @@ class Storage:
                 centro = ?,
                 plazas = ?,
                 deadline_inscripcion = ?,
+                deadline_estimated = ?,
                 fecha_publicacion_oficial = ?,
                 tasas_eur = ?,
                 url_bases = ?,
@@ -346,6 +355,7 @@ class Storage:
                 item.centro,
                 item.plazas,
                 item.deadline_inscripcion,
+                None if item.deadline_estimated is None else int(bool(item.deadline_estimated)),
                 item.fecha_publicacion_oficial,
                 item.tasas_eur,
                 item.url_bases,
@@ -565,7 +575,7 @@ class Storage:
         cur = self._conn.execute(
             """
             SELECT id_hash, titulo, url, organismo, url_inscripcion,
-                   deadline_inscripcion
+                   deadline_inscripcion, deadline_estimated
             FROM items
             WHERE deadline_inscripcion IS NOT NULL
               AND deadline_inscripcion >= ?
@@ -582,6 +592,7 @@ class Storage:
                 organismo=row[3],
                 url_inscripcion=row[4],
                 deadline_inscripcion=row[5],
+                deadline_estimated=bool(row[6]),
             )
             for row in cur
         ]

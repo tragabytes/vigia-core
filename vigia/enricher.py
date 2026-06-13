@@ -379,6 +379,21 @@ def _build_initial_user_content(item: Item) -> str:
                 "automático en el cuerpo descargado:]\n"
                 + "\n---\n".join(snippets)
             )
+        # Snippets de la sección de PLAZO (presupuesto aparte: la fecha de
+        # cierre suele vivir lejos de las menciones de la especialidad, así que
+        # no debe competir por el cupo de los snippets de arriba). Ventana algo
+        # más amplia para arrastrar el "a partir del día siguiente a la
+        # publicación en el BOE" completo.
+        deadline_snippets = _extract_relevant_snippets(
+            raw_text, window=500, max_snippets=2,
+            keywords=_SNIPPET_KEYWORDS_DEADLINE,
+        )
+        if deadline_snippets:
+            snippet_block += (
+                "\n\n[Fragmentos del plazo de presentación localizados en el "
+                "cuerpo (para extraer/calcular el deadline):]\n"
+                + "\n---\n".join(deadline_snippets)
+            )
         # Tope total para no saturar el prompt.
         body_section = (head + snippet_block)[:MAX_TEXT_CHARS]
     else:
@@ -408,12 +423,18 @@ def _build_initial_user_content(item: Item) -> str:
 # Vienen del perfil activo (ver vigia/_default_profile.py).
 _SNIPPET_KEYWORDS_HIGH = get_active_profile().enricher_snippet_keywords_high
 _SNIPPET_KEYWORDS_LOW = get_active_profile().enricher_snippet_keywords_low
+# Anclas para inyectar la sección de PLAZO/cierre, que suele vivir lejos de
+# las menciones de la especialidad (ver _build_initial_user_content).
+_SNIPPET_KEYWORDS_DEADLINE = list(
+    get_active_profile().enricher_snippet_keywords_deadline
+)
 
 
 def _extract_relevant_snippets(
     text: str,
     window: int = 400,
     max_snippets: int = 6,
+    keywords: Optional[list[str]] = None,
 ) -> list[str]:
     """Devuelve hasta `max_snippets` ventanas de ~`window` chars centradas
     en cada match de las keywords. Fusiona ventanas que se solapan para no
@@ -472,14 +493,18 @@ def _extract_relevant_snippets(
                 break
         return out
 
-    # 1. Procesar HIGH primero (tomamos hasta max_snippets matches HIGH).
-    high_windows = _spans_to_windows(_find_spans(_SNIPPET_KEYWORDS_HIGH), [])
-    # 2. Si queda cupo, rellenar con LOW.
-    final_windows = (
-        high_windows
-        if len(high_windows) >= max_snippets
-        else _spans_to_windows(_find_spans(_SNIPPET_KEYWORDS_LOW), high_windows)
-    )
+    if keywords is not None:
+        # Lista explícita (p.ej. anclas de plazo): sin distinción HIGH/LOW.
+        final_windows = _spans_to_windows(_find_spans(list(keywords)), [])
+    else:
+        # 1. Procesar HIGH primero (tomamos hasta max_snippets matches HIGH).
+        high_windows = _spans_to_windows(_find_spans(_SNIPPET_KEYWORDS_HIGH), [])
+        # 2. Si queda cupo, rellenar con LOW.
+        final_windows = (
+            high_windows
+            if len(high_windows) >= max_snippets
+            else _spans_to_windows(_find_spans(_SNIPPET_KEYWORDS_LOW), high_windows)
+        )
 
     if not final_windows:
         return []
@@ -636,6 +661,12 @@ def _apply_enrichment(item: Item, data: dict[str, Any]) -> None:
 
     deadline = _coerce_str(data.get("deadline_inscripcion"))
     item.deadline_inscripcion = deadline if (deadline and _DATE_RE.match(deadline)) else None
+    # `deadline_estimated`: True si el LLM calculó la fecha de un plazo relativo
+    # ("N días desde la publicación"). Solo tiene sentido si hay deadline.
+    item.deadline_estimated = (
+        bool(_coerce_bool(data.get("deadline_estimated")))
+        if item.deadline_inscripcion else None
+    )
 
     fpub = _coerce_str(data.get("fecha_publicacion_oficial"))
     item.fecha_publicacion_oficial = fpub if (fpub and _DATE_RE.match(fpub)) else None

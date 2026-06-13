@@ -60,6 +60,25 @@ class Profile:
     # (un único aviso por umbral). Vacío = desactiva los recordatorios.
     deadline_reminder_days: tuple[int, ...] = (7, 3, 1)
 
+    # --- Enricher: anclas de snippet para la sección de PLAZO ---
+    # Términos genéricos de convocatoria pública española alrededor de los
+    # cuales el enricher inyecta una ventana de texto, para que la fecha/plazo
+    # de cierre llegue al prompt aunque viva lejos de las keywords de la
+    # especialidad. Default genérico (sirve a cualquier perfil); un bot puede
+    # sobrescribirlo si lo necesita.
+    enricher_snippet_keywords_deadline: tuple[str, ...] = (
+        "plazo de presentación", "plazo de presentacion",
+        "plazo de inscripción", "plazo de inscripcion",
+        "presentación de solicitudes", "presentacion de solicitudes",
+        "presentación de instancias", "presentacion de instancias",
+        "fecha límite", "fecha limite",
+        "hasta el día", "hasta el dia",
+        "días hábiles", "dias habiles",
+        "días naturales", "dias naturales",
+        "a partir del día siguiente", "a partir del dia siguiente",
+        "siguiente al de la publicación", "siguiente al de la publicacion",
+    )
+
 
 # ---------------------------------------------------------------------------
 # Registro del perfil activo (un perfil por proceso)
