@@ -464,3 +464,70 @@ class TestEnrichPending:
         s.close()
         assert n == 0
         fake_client.messages.create.assert_not_called()
+
+    def test_item_estructurado_sin_body_se_preserva_no_se_machaca(
+        self, tmp_path, monkeypatch
+    ):
+        """Un item ya enriquecido v2 (con deadline) cuyo body NO se puede
+        recargar (URL fuera de whitelist) NO se re-enriquece: conserva sus
+        campos buenos en lugar de machacarlos con un resultado degradado.
+        (Regresión del backfill 2026-06-13: BOE dio timeout y se perdieron
+        deadlines.)"""
+        from vigia.storage import Storage
+
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+        fake_client = MagicMock()
+        fake_client.messages.create.return_value = _resp(
+            "end_turn", [_block("text", text=_FULL_JSON)]
+        )
+        import anthropic
+        monkeypatch.setattr(anthropic, "Anthropic", lambda: fake_client)
+
+        s = Storage(db_path=tmp_path / "seen.db")
+        # URL fuera de whitelist → _fetch_body_full devuelve "" sin red.
+        item = _make_item("Item v2 con deadline", url="https://example.com/x")
+        s.save(item)
+        s._conn.execute(
+            "UPDATE items SET enriched_version=?, deadline_inscripcion=?, "
+            "is_relevant=? WHERE id_hash=?",
+            (2, "2026-09-01", 1, item.id_hash),
+        )
+        s._conn.commit()
+
+        n = enricher.enrich_pending(s)
+
+        row = s._conn.execute(
+            "SELECT enriched_version, deadline_inscripcion FROM items "
+            "WHERE id_hash=?", (item.id_hash,),
+        ).fetchone()
+        s.close()
+        assert n == 0
+        fake_client.messages.create.assert_not_called()
+        assert row[0] == 2                      # versión sin cambiar
+        assert row[1] == "2026-09-01"           # deadline preservado, no machacado
+
+    def test_item_nuevo_sin_body_si_se_enriquece(self, tmp_path, monkeypatch):
+        """Un item SIN enriquecimiento estructurado previo (version NULL) sí se
+        enriquece aunque no haya body — no hay datos buenos que erosionar."""
+        from vigia.storage import Storage
+
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+        fake_client = MagicMock()
+        fake_client.messages.create.return_value = _resp(
+            "end_turn", [_block("text", text=_FULL_JSON)]
+        )
+        import anthropic
+        monkeypatch.setattr(anthropic, "Anthropic", lambda: fake_client)
+
+        s = Storage(db_path=tmp_path / "seen.db")
+        item = _make_item("Item nuevo sin body", url="https://example.com/y")
+        s.save(item)  # enriched_version = NULL
+
+        n = enricher.enrich_pending(s)
+        row = s._conn.execute(
+            "SELECT enriched_version FROM items WHERE id_hash=?",
+            (item.id_hash,),
+        ).fetchone()
+        s.close()
+        assert n == 1
+        assert row[0] == ENRICHMENT_VERSION

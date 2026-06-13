@@ -32,6 +32,7 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import datetime, timezone
 from typing import Any, Optional
 from urllib.parse import urlparse
@@ -53,6 +54,11 @@ logger = logging.getLogger(__name__)
 MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 2048
 MAX_TOOL_ITERATIONS = 4   # tope de loops para evitar runaway costs
+# Cortesía entre descargas de body en el backfill (enrich_pending): espacia
+# las peticiones para no provocar throttling de la fuente (BOE rechazaba la
+# ráfaga de ~24 GETs seguidos con ConnectTimeout). Solo se aplica tras una
+# descarga real con éxito; los tests (URLs fuera de whitelist) no lo tocan.
+BACKFILL_FETCH_DELAY_S = 0.5
 # Texto inyectado en el prompt inicial. 1500 chars era insuficiente para
 # convocatorias BOE genéricas tipo "personal facultativo y técnico" donde
 # las plazas concretas de Enfermería viven más allá del char 8000 (caso
@@ -193,21 +199,46 @@ def enrich_pending(storage: Storage) -> int:
         len(pending), ENRICHMENT_VERSION,
     )
     fetched = 0
+    enrichable: list[Item] = []
+    preserved = 0
     for item in pending:
         if item.extra is None:
             item.extra = {}
+        if not item.extra.get("raw_text"):
+            body = _fetch_body_full(item.url)
+            if body and not body.startswith("ERROR"):
+                item.extra["raw_text"] = body
+                fetched += 1
+                if BACKFILL_FETCH_DELAY_S:
+                    time.sleep(BACKFILL_FETCH_DELAY_S)
         if item.extra.get("raw_text"):
-            continue
-        body = _fetch_body_full(item.url)
-        if body and not body.startswith("ERROR"):
-            item.extra["raw_text"] = body
-            fetched += 1
+            enrichable.append(item)
+        elif (item.enriched_version or 0) >= 2:
+            # Ya tenía enriquecimiento ESTRUCTURADO (deadline, plazas…) y no
+            # hemos podido recargar el body. Re-enriquecer sin cuerpo daría un
+            # resultado degradado que MACHACARÍA esos campos buenos (pasó con
+            # 24 items BOE cuando el host dio timeout en el backfill). Lo
+            # preservamos: mantiene su versión anterior y un maintenance futuro
+            # lo reintentará cuando la fuente responda.
+            preserved += 1
+            logger.info(
+                "enrich_pending: %s sin body — se preserva su enriquecimiento "
+                "v%s (no se machaca)", item.id_hash, item.enriched_version,
+            )
+        else:
+            # Sin enriquecimiento estructurado previo que perder: se enriquece
+            # igualmente (puede salir como FP, pero no hay datos que erosionar).
+            enrichable.append(item)
     logger.info(
-        "Enricher: %d/%d bodies pre-cargados desde URL del item",
-        fetched, len(pending),
+        "Enricher: %d/%d bodies pre-cargados; %d items a enriquecer, %d "
+        "preservados sin body", fetched, len(pending), len(enrichable), preserved,
     )
 
-    enriched = enrich(pending)
+    if not enrichable:
+        logger.info("Enricher: nada que re-enriquecer (todo preservado)")
+        return 0
+
+    enriched = enrich(enrichable)
     n = 0
     for item in enriched:
         if item.enriched_version is not None:
