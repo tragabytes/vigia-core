@@ -334,6 +334,10 @@ CRITERIOS PARA `fase`:
 
 REGLAS DE EXTRACCIÓN:
 - Fechas en formato `YYYY-MM-DD`. Si solo conoces el mes y año, deja `null`.
+- `deadline_inscripcion` (FECHA DE CIERRE DEL PLAZO DE PRESENTACIÓN DE SOLICITUDES) es un dato CLAVE: búscalo activamente en la sección de "plazo de presentación / plazo de inscripción / presentación de instancias". Dos casos:
+  · ABSOLUTO: si las bases dan una fecha de cierre explícita ("hasta el 15/05/2026", "el plazo finaliza el…"), úsala tal cual y deja `deadline_estimated: false`.
+  · RELATIVO: si el plazo se expresa como "N días hábiles/naturales a partir del día siguiente al de la publicación en el BOE/BOCM", CALCULA la fecha absoluta a partir de `fecha_publicacion_oficial`: días naturales se suman tal cual; días hábiles excluyen sábados, domingos y festivos nacionales de España que conozcas. Devuelve la fecha calculada en `deadline_inscripcion` y marca `deadline_estimated: true`.
+  · Si NO puedes fijar con certeza la fecha de publicación o el número de días, deja `deadline_inscripcion: null` (no inventes una fecha).
 - `plazas`: solo el TOTAL de plazas convocadas; si no aparece, `null`.
 - `tasas_eur`: tasa de inscripción base en euros (no descuentos ni reducciones).
 - `url_bases`: URL al PDF/HTML con las bases completas (a veces es un anexo distinto del que recibes).
@@ -361,6 +365,7 @@ Responde SOLO con un bloque JSON válido (puedes envolverlo en ```json … ``` s
   "centro": "string|null",
   "plazas": int|null,
   "deadline_inscripcion": "YYYY-MM-DD|null",
+  "deadline_estimated": true|false,
   "fecha_publicacion_oficial": "YYYY-MM-DD|null",
   "tasas_eur": float|null,
   "url_bases": "string|null",
