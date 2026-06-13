@@ -17,6 +17,7 @@ from vigia.profile import Profile
 from vigia.sources.canal_isabel_ii_calendario import CanalIsabelIICalendarioSource
 from vigia.sources.cm_ficha_enfermeria import ComunidadMadridFichaEnfermeriaSource
 from vigia.sources.codem import CODEMSource
+from vigia.sources.epreselec import EpreselecEmpresa
 from vigia.sources.isciii import ISCIIISource
 
 # ---------------------------------------------------------------------------
@@ -292,6 +293,7 @@ _SOURCES_ENABLED = [
     "isciii",
     "universidades_madrid",
     "sap_successfactors",
+    "epreselec",
     "las_rozas",
     "aena",
     "iac",
@@ -475,5 +477,18 @@ DEFAULT = Profile(
         "isciii": ISCIIISource,
         "canal_isabel_ii_calendario": CanalIsabelIICalendarioSource,
     },
-    source_params={},
+    # Tenants de la fuente genérica `epreselec` (ATS multi-tenant). La lista la
+    # aporta el perfil, no el core: hoy mutuas/SPA que publican en ePreselec.
+    # Solo entran tenants confirmados vivos (200 + ofertas en HTML server-side).
+    source_params={
+        "epreselec": {
+            "empresas": [
+                EpreselecEmpresa(
+                    "FRATERNIDAD",
+                    "Fraternidad-Muprespa",
+                    "https://fraternidad.epreselec.com",
+                ),
+            ],
+        },
+    },
 )
