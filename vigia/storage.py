@@ -469,14 +469,23 @@ class Storage:
         """
         cur = self._conn.execute(
             """
-            SELECT id_hash, source, url, titulo, fecha, categoria, first_seen_at
+            SELECT id_hash, source, url, titulo, fecha, categoria, first_seen_at,
+                   enriched_version
             FROM items
             WHERE enriched_version IS NULL OR enriched_version < ?
             ORDER BY first_seen_at DESC
             """,
             (ENRICHMENT_VERSION,),
         )
-        return [_row_to_basic_item(r) for r in cur]
+        out = []
+        for r in cur:
+            item = _row_to_basic_item(r)  # ignora columnas extra (lee 0..6)
+            # Poblamos enriched_version para que enrich_pending sepa si el item
+            # ya tenía enriquecimiento estructurado (y no machacarlo si la
+            # re-descarga del body falla).
+            item.enriched_version = r[7]
+            out.append(item)
+        return out
 
     def iter_all_items(self) -> list[tuple[str, str, str]]:
         """Devuelve `(id_hash, titulo, categoria)` de todos los items.
