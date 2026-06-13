@@ -289,14 +289,19 @@ _SOURCES_ENABLED = [
     "administracion_gob",
     "codem",
     "datos_madrid",
-    "ciemat",
     "isciii",
     "universidades_madrid",
     "sap_successfactors",
     "las_rozas",
     "aena",
     "iac",
-    "csic_sede",
+    # NOTA: "ciemat" y "csic_sede" desactivadas a propósito. Desde el runner de
+    # GitHub Actions fallan en cada run (ciemat: cert SSL sin intermedio en el
+    # probe/detail_watcher; csic_sede: ConnectTimeout persistente al host, 0 hits
+    # históricos) y solo generaban ruido de error en Telegram/dashboard. Sus
+    # convocatorias reales se cubren igualmente vía BOE (ver
+    # tests/test_organism_coverage.py). Las clases siguen en el registry por si
+    # se reactivan en el futuro.
 ]
 
 # ---------------------------------------------------------------------------

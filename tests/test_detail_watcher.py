@@ -291,6 +291,24 @@ class TestDetailWatcher:
         s.close()
         assert mock_get.call_count == 0
 
+    def test_ciemat_excluido_por_defecto_no_se_consulta(self, tmp_path):
+        # ciemat está en EXCLUDED_SOURCES: su cert no envía el intermedio y el
+        # GET genérico (verify=True) revienta con SSLError en cada run. El
+        # watcher por defecto no debe tocar items ciemat guardados en BD.
+        assert "ciemat" in EXCLUDED_SOURCES
+        s = Storage(db_path=tmp_path / "seen.db")
+        _persist_item(s, source="ciemat",
+                      url="https://www.ciemat.es/ofertas-de-empleo/-/ofertas/oferta/2380",
+                      titulo="CIEMAT Enfermería del Trabajo",
+                      deadline_inscripcion="2099-01-01")
+        dw = DetailWatcher(s)  # excluded_sources por defecto
+        with patch(
+            "vigia.watchers.detail_watcher.requests.get"
+        ) as mock_get:
+            dw.run()
+        s.close()
+        assert mock_get.call_count == 0
+
     def test_body_grande_se_trunca_a_max_body_bytes(self, tmp_path):
         """Body > 16 KB se trunca defensivamente al persistir."""
         s = Storage(db_path=tmp_path / "seen.db")
