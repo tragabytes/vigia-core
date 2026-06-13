@@ -40,7 +40,7 @@ import requests
 
 from vigia.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, USER_AGENT
 from vigia.profile import get_active_profile
-from vigia.storage import Item
+from vigia.storage import DeadlineReminder, Item
 
 logger = logging.getLogger(__name__)
 
@@ -56,20 +56,23 @@ def send(
     items: list[Item],
     errors: list[tuple[str, str]],
     run_date: Optional[date] = None,
+    reminders: Optional[list[DeadlineReminder]] = None,
 ) -> None:
     """
     Envía el resumen del día a Telegram.
 
-    :param items:    Hallazgos nuevos ya deduplicados.
-    :param errors:   Lista de (nombre_fuente, mensaje_error) para fuentes que fallaron.
-    :param run_date: Fecha de la ejecución; si None, usa hoy.
+    :param items:     Hallazgos nuevos ya deduplicados.
+    :param errors:    Lista de (nombre_fuente, mensaje_error) para fuentes que fallaron.
+    :param run_date:  Fecha de la ejecución; si None, usa hoy.
+    :param reminders: Recordatorios de cierre de plazo a incluir en una sección
+                      aparte ("Cierran pronto"). None/[] = sin recordatorios.
     """
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         logger.warning("Credenciales Telegram no configuradas — notificación omitida")
         return
 
     today = run_date or date.today()
-    message = _build_message(items, errors, today)
+    message = _build_message(items, errors, today, reminders or [])
 
     for chunk in _split(message):
         _send_chunk(chunk)
@@ -91,8 +94,14 @@ def send_test(message: Optional[str] = None) -> None:
 # Funciones internas
 # ---------------------------------------------------------------------------
 
-def _build_message(items: list[Item], errors: list[tuple[str, str]], today: date) -> str:
+def _build_message(
+    items: list[Item],
+    errors: list[tuple[str, str]],
+    today: date,
+    reminders: Optional[list[DeadlineReminder]] = None,
+) -> str:
     profile = get_active_profile()
+    reminders = reminders or []
     fecha_str = today.strftime("%d/%m/%Y")
     lines: list[str] = [f"🔔 <b>{profile.display_name} — {fecha_str}</b>\n"]
 
@@ -100,8 +109,15 @@ def _build_message(items: list[Item], errors: list[tuple[str, str]], today: date
         for item in items:
             lines.extend(_format_item(item, today))
             lines.append("")
-    else:
+    elif not reminders:
+        # Sólo "sin novedades" si tampoco hay recordatorios que mostrar.
         lines.append("Sin novedades hoy.\n")
+
+    if reminders:
+        lines.append("⏰ <b>Cierran pronto</b>\n")
+        for rem in reminders:
+            lines.extend(_format_reminder(rem))
+            lines.append("")
 
     for source_name, err_msg in errors:
         lines.append(
@@ -112,6 +128,33 @@ def _build_message(items: list[Item], errors: list[tuple[str, str]], today: date
     lines.append(f"🛰️ Panel completo: {profile.dashboard_url}")
 
     return "\n".join(lines)
+
+
+def _format_reminder(rem: DeadlineReminder) -> list[str]:
+    """Bloque compacto para un recordatorio de cierre de plazo.
+
+    Recuerda una convocatoria YA conocida (no es un alta), así que basta
+    con título, cuándo cierra y el enlace para apuntarse.
+    """
+    days = rem.days_left
+    if days <= 0:
+        when = "HOY"
+    elif days == 1:
+        when = "mañana"
+    else:
+        when = f"en {days} días"
+    head = f"⏰ <b>Cierra {when}</b>"
+    if rem.organismo:
+        head += f" — {_escape(rem.organismo)}"
+    block = [head, f"<b>{_escape(rem.titulo)}</b>"]
+    try:
+        fecha_es = date.fromisoformat(rem.deadline_inscripcion).strftime("%d/%m/%Y")
+        block.append(f"📅 Cierre: {fecha_es}")
+    except (ValueError, TypeError):
+        pass
+    link = rem.url_inscripcion or rem.url
+    block.append(f"✍️ {_escape(link)}")
+    return block
 
 
 def _format_item(item: Item, today: date) -> list[str]:
@@ -161,6 +204,14 @@ def _format_item(item: Item, today: date) -> list[str]:
         fase_label = FASE_LABEL.get(item.fase, item.fase)
         block.append(f"🪪 Fase: {_escape(fase_label)}")
 
+    # Requisitos clave (enricher v2): vía de acceso (EIR/habilitación),
+    # especialidad exigida, experiencia… lo que el usuario necesita para
+    # saber si encaja sin abrir las bases.
+    if item.requisitos_clave:
+        reqs = " · ".join(_escape(r) for r in item.requisitos_clave if r)
+        if reqs:
+            block.append(f"📋 Requisitos: {_truncate(reqs, 220)}")
+
     # Acción inmediata
     if item.next_action:
         block.append(f"🎯 {_escape(item.next_action)}")
@@ -175,6 +226,10 @@ def _format_item(item: Item, today: date) -> list[str]:
     block.append(f"🔗 {_escape(item.url)}")
     if item.url_bases and item.url_bases != item.url:
         block.append(f"📎 Bases: {_escape(item.url_bases)}")
+    # Enlace directo de inscripción si el enricher lo encontró y aporta
+    # (distinto del anuncio y de las bases) — el "dónde apuntarse".
+    if item.url_inscripcion and item.url_inscripcion not in (item.url, item.url_bases):
+        block.append(f"✍️ Inscripción: {_escape(item.url_inscripcion)}")
 
     # Categoría legacy al final como tag (consume poco y mantiene continuidad
     # con el layout previo)
@@ -204,6 +259,15 @@ def _format_eur(amount: float) -> str:
     if abs(amount - round(amount)) < 0.005:
         return f"{int(round(amount))}€"
     return f"{amount:.2f}€".replace(".", ",")
+
+
+def _truncate(text: str, limit: int) -> str:
+    """Recorta `text` a `limit` chars con elipsis, para no inflar el mensaje.
+    Se aplica tras escapar; el cap es generoso (no parte entidades HTML en
+    los casos reales, donde el texto son requisitos cortos)."""
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"
 
 
 def _escape(text: str) -> str:
