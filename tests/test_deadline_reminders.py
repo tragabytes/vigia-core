@@ -140,6 +140,22 @@ class TestBuildMessageReminders:
     def test_sin_items_ni_recordatorios_dice_sin_novedades(self):
         msg = _build_message([], [("boe", "503")], date(2026, 6, 13), [])
         assert "Sin novedades hoy" in msg
+        # Los errores de fuentes NO se renderizan al usuario, ni siquiera
+        # cuando se construye un mensaje "sin novedades".
+        assert "no respondió" not in msg
+        assert "503" not in msg
+
+    def test_errores_no_se_renderizan_con_novedades_reales(self):
+        # Con una convocatoria real, el bloque de errores tampoco se cuela.
+        msg = _build_message(
+            [_item(titulo="Convocatoria visible")],
+            [("boe", "503"), ("isciii", "500 Server Error")],
+            date(2026, 6, 13),
+            [],
+        )
+        assert "Convocatoria visible" in msg
+        assert "no respondió" not in msg
+        assert "Server Error" not in msg
 
 
 # ---------------------------------------------------------------------------
