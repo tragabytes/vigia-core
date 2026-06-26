@@ -389,14 +389,24 @@ def main() -> None:
             discarded,
         )
 
-    if notifiable or errors or reminders:
+    if notifiable or reminders:
         # `reminders` se pasa solo cuando hay alguno, para no alterar la firma
         # esperada por notifiers mockeados en tests que no lo contemplan.
+        # `errors` se sigue propagando al notifier (firma estable) aunque ya no
+        # se renderice al usuario — ver notifier._build_message.
         if reminders:
             send(notifiable, errors, run_date=today, reminders=reminders)
         else:
             send(notifiable, errors)
     else:
+        # Un día con SOLO errores (sin novedades ni recordatorios) NO notifica al
+        # usuario: los fallos de fuentes son ruido de infraestructura no
+        # accionable. Se deja traza para el operador (logs de Actions/dashboard).
+        if errors:
+            logger.info(
+                "%d fuentes con errores — no se notifica a usuarios "
+                "(visibles en logs/dashboard)", len(errors),
+            )
         logger.info("Sin novedades relevantes hoy — no se envía notificación Telegram")
 
 

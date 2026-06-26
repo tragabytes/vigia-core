@@ -119,10 +119,12 @@ def _build_message(
             lines.extend(_format_reminder(rem))
             lines.append("")
 
-    for source_name, err_msg in errors:
-        lines.append(
-            f"⚠️ Fuente <b>{_escape(source_name)}</b> no respondió: {_escape(err_msg)}"
-        )
+    # `errors` se sigue recibiendo (firma estable para llamadores y mocks de
+    # tests), pero por decisión de producto NO se renderiza al usuario: los
+    # fallos de fuentes (timeouts, 5xx, 4xx) son ruido de infraestructura no
+    # accionable para el destinatario. La visibilidad para el operador se
+    # mantiene en los logs de Actions y el dashboard. Ver main.py: con solo
+    # errores (sin novedades ni recordatorios) no se llega a enviar nada.
 
     lines.append("")
     lines.append(f"🛰️ Panel completo: {profile.dashboard_url}")
