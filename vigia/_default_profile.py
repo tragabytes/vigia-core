@@ -19,6 +19,7 @@ from vigia.sources.cm_ficha_enfermeria import ComunidadMadridFichaEnfermeriaSour
 from vigia.sources.codem import CODEMSource
 from vigia.sources.epreselec import EpreselecEmpresa
 from vigia.sources.isciii import ISCIIISource
+from vigia.sources.rtve import RTVESource
 
 # ---------------------------------------------------------------------------
 # Términos de búsqueda (sección 3 del plan)
@@ -246,7 +247,7 @@ _WATCHLIST_ORGS = [
      "desc": "Paradores de Turismo — cobertura indirecta BOE/BOCM (sin portal público de empleo)",
      "patterns": ["paradores", "paradores de turismo"]},
     {"id": "T-36", "name": "RTVE",
-     "desc": "Radio Televisión Española — cobertura indirecta BOE/BOCM (SPA absoluta sin endpoint público)",
+     "desc": "Radio Televisión Española — parser propio de la página corporativa de ofertas (banco de datos Enfermería de Empresa) + cobertura BOE/BOCM; la SPA de inscripción convocatorias.rtve.es no es parseable",
      "patterns": ["rtve", "radio television espanola", "radio y television espanola"]},
     {"id": "T-37", "name": "SELAE Loterías",
      "desc": "Sociedad Estatal Loterías y Apuestas — cobertura indirecta BOE/BOCM (Akamai bloquea parser directo)",
@@ -291,6 +292,7 @@ _SOURCES_ENABLED = [
     "codem",
     "datos_madrid",
     "isciii",
+    "rtve",
     "universidades_madrid",
     "sap_successfactors",
     "epreselec",
@@ -476,6 +478,7 @@ DEFAULT = Profile(
         "cm_ficha_enfermeria": ComunidadMadridFichaEnfermeriaSource,
         "isciii": ISCIIISource,
         "canal_isabel_ii_calendario": CanalIsabelIICalendarioSource,
+        "rtve": RTVESource,
     },
     # Tenants de la fuente genérica `epreselec` (ATS multi-tenant). La lista la
     # aporta el perfil, no el core: hoy mutuas/SPA que publican en ePreselec.
