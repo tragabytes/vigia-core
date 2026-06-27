@@ -109,6 +109,19 @@ class TestCasosHistoricos:
         assert item is not None
         assert item.categoria == "bolsa"
 
+    def test_banco_de_datos_contratos_temporales_es_bolsa(self):
+        """RTVE publica 'Convocatoria 1/2026 ... Banco de Datos de ... contratos
+        de duración determinada'. Es una bolsa, aunque diga 'Convocatoria'
+        (antes caía en oposicion porque el hint 'convocatoria' ganaba)."""
+        item = extract(_raw(
+            "Convocatoria 1/2026: Banco de Datos de Enfermería de Empresa. "
+            "Pruebas para el acceso al Banco de Datos de otras modalidades de "
+            "contratos de duración determinada respecto a la ocupación tipo "
+            "Enfermería de Empresa."
+        ))
+        assert item is not None
+        assert item.categoria == "bolsa"
+
     def test_proceso_estabilizacion_es_oposicion(self):
         """SERMAS publica 'Proceso de estabilización en SERMAS de la categoría
         de Enfermero/a Especialista en Enfermería del Trabajo'. Es un proceso
