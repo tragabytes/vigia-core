@@ -84,25 +84,43 @@ class HashWatcherSource(Source):
         devuelve `None`. La subclase decide qué hacer con el `None`
         (típicamente devuelve `[]`).
         """
-        body_text = extract_clean_text(
+        # Texto plano (separador espacio) para el HASH y la fecha. Mantener
+        # ESTE formato es lo que da estabilidad al hash entre runs (no se
+        # re-snapshotea todo al desplegar este cambio).
+        hash_body = extract_clean_text(
             html,
             target_selectors=self.body_selectors,
             extra_decompose=self.noise_selectors,
         )
-        if not body_text.strip():
+        if not hash_body.strip():
             msg = f"{self.error_label}: cuerpo principal vacío tras limpieza"
             self.logger.warning(msg)
             self.last_errors.append(msg)
             return None
 
-        snapshot_hash = hashlib.sha1(body_text.encode("utf-8")).hexdigest()[:10]
+        # Texto ESTRUCTURADO (una línea por bloque) para `raw_text`. El
+        # diff_summarizer compara raw_text por LÍNEAS: si el cuerpo es una sola
+        # línea, cualquier cambio se ve como "la línea entera cambió" y, como
+        # esa línea contiene "Última actualización", el pre-filtro lo marca
+        # cosmético y SUPRIME alertas reales (bug de cm_ficha: 23→25 junio +
+        # supuestos prácticos quedaba enmascarado). Con líneas separadas, el
+        # cambio de timestamp queda aislado del contenido nuevo.
+        structured_body = extract_clean_text(
+            html,
+            target_selectors=self.body_selectors,
+            extra_decompose=self.noise_selectors,
+            separator="\n",
+            collapse_lines=True,
+        )
+
+        snapshot_hash = hashlib.sha1(hash_body.encode("utf-8")).hexdigest()[:10]
         title = self.title_template.format(hash=snapshot_hash)
-        pub_date = self.extract_pub_date(html, body_text)
+        pub_date = self.extract_pub_date(html, hash_body)
 
         return RawItem(
             source=self.name,
             url=self.url,
             title=title,
             date=pub_date,
-            text=body_text,
+            text=structured_body,
         )
