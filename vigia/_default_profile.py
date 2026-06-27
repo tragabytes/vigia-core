@@ -115,6 +115,8 @@ _CATEGORY_HINTS = {
         "bolsa de trabajo",
         "bolsa unica",          # cubre "Bolsa única de empleo temporal..."
         "contratacion temporal",
+        "banco de datos",       # RTVE: "Banco de Datos de ... contratos temporales"
+        "duracion determinada", # "contratos de duración determinada" (bolsa, no oposición)
     ],
     "traslado": ["concurso de traslados", "concurso de meritos", "concurso-traslado"],
     "oposicion": [
