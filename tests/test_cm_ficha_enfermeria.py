@@ -227,3 +227,51 @@ def test_fetch_sin_fecha_extraible_cae_a_today(monkeypatch):
                return_value=_resp(html)):
         items = src.fetch(_date(2026, 1, 1))
     assert items[0].date == _date(2026, 4, 28)
+
+
+# ---------------------------------------------------------------------------
+# Regresión: raw_text estructurado para que el diff_summarizer no enmascare
+# novedades reales (bug 2026-06: cm_ficha 585fe4→7cfbb9 con "supuestos
+# prácticos" se suprimió como cosmético porque el body era una sola línea).
+# ---------------------------------------------------------------------------
+
+# Igual que HTML_BASE pero con una novedad de contenido (y bump de fecha).
+HTML_NOVEDAD = HTML_BASE.replace("25 marzo 2026", "26 marzo 2026").replace(
+    "</article>",
+    "    <p>Publicados los supuestos prácticos del segundo ejercicio "
+    "(23 de junio de 2026).</p>\n  </article>",
+)
+
+
+def test_raw_text_es_multilinea_para_que_el_diff_aisle_cambios():
+    src = ComunidadMadridFichaEnfermeriaSource()
+    with patch("vigia.sources.cm_ficha_enfermeria.requests.get",
+               return_value=_resp(HTML_BASE)):
+        item = src.fetch(date(2026, 1, 1))[0]
+    # El body se guarda estructurado (una línea por bloque), no aplanado.
+    assert "\n" in item.text
+
+
+def test_cambio_de_contenido_no_se_suprime_como_cosmetico():
+    """Con el body de UNA línea, añadir 'supuestos prácticos' se marcaba
+    cosmético (la línea entera contenía 'Última actualización') y la alerta
+    se perdía. Con raw_text estructurado el pre-filtro NO lo suprime."""
+    from vigia.diff_summarizer import _classify_locally
+
+    src = ComunidadMadridFichaEnfermeriaSource()
+    with patch("vigia.sources.cm_ficha_enfermeria.requests.get",
+               return_value=_resp(HTML_BASE)):
+        old = src.fetch(date(2026, 1, 1))[0].text
+    with patch("vigia.sources.cm_ficha_enfermeria.requests.get",
+               return_value=_resp(HTML_NOVEDAD)):
+        new = src.fetch(date(2026, 1, 1))[0].text
+
+    # FIX: estructurado → no se decide localmente como cosmético (pasa al LLM,
+    # que en producción lo marca sustantivo).
+    assert _classify_locally(old, new) is None
+    assert "supuestos prácticos" in new.lower()
+
+    # Documenta el BUG: aplanado a una sola línea SÍ se habría suprimido.
+    flat_old = " ".join(old.split())
+    flat_new = " ".join(new.split())
+    assert _classify_locally(flat_old, flat_new) == (False, None)

@@ -195,31 +195,44 @@ class DetailWatcher:
             self.last_errors.append(msg)
             return None
 
-        body = extract_clean_text(
+        # Texto plano (separador espacio) para el HASH: estable entre runs.
+        hash_body = extract_clean_text(
             resp.text, target_selectors=self.body_selectors
         )
-        if not body.strip():
+        if not hash_body.strip():
             msg = f"{source} {url}: cuerpo vacío tras limpieza"
             logger.warning("DetailWatcher body: %s", msg)
             self.last_errors.append(msg)
             return None
 
-        # Cap defensivo: 16 KB es suficiente para todos los hash-watchers
-        # actuales (cm_ficha 3.5 KB, isciii ~10 KB, calendario 167 bytes).
-        # Si una URL real se trunca, queda log para reevaluar.
-        if len(body.encode("utf-8")) > MAX_BODY_BYTES:
+        # Texto ESTRUCTURADO (líneas) para el body emitido/persistido: el
+        # diff_summarizer compara por líneas; un cuerpo de una sola línea
+        # enmascara las novedades reales tras "Última actualización" y las
+        # suprime como cosméticas (mismo bug que en _hash_watcher).
+        structured_body = extract_clean_text(
+            resp.text, target_selectors=self.body_selectors,
+            separator="\n", collapse_lines=True,
+        )
+
+        # Cap defensivo (16 KB): el hash sobre el plano (estable), el body
+        # persistido sobre el estructurado.
+        if len(hash_body.encode("utf-8")) > MAX_BODY_BYTES:
             logger.info(
                 "DetailWatcher: body de %s excede %d bytes, truncando",
                 url, MAX_BODY_BYTES,
             )
-            body = body.encode("utf-8")[:MAX_BODY_BYTES].decode(
+            hash_body = hash_body.encode("utf-8")[:MAX_BODY_BYTES].decode(
+                "utf-8", errors="ignore"
+            )
+        if len(structured_body.encode("utf-8")) > MAX_BODY_BYTES:
+            structured_body = structured_body.encode("utf-8")[:MAX_BODY_BYTES].decode(
                 "utf-8", errors="ignore"
             )
 
-        new_hash = hashlib.sha1(body.encode("utf-8")).hexdigest()[:10]
+        new_hash = hashlib.sha1(hash_body.encode("utf-8")).hexdigest()[:10]
         return _FetchResult(
             source=source, url=url, titulo=titulo,
-            body=body, new_hash=new_hash,
+            body=structured_body, new_hash=new_hash,
         )
 
     def _compare_and_emit(self, fr: _FetchResult) -> Optional[RawItem]:
