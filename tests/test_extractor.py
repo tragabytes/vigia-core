@@ -335,3 +335,29 @@ class TestRawTextPersistencia:
         ))
         assert item is not None
         assert item.raw_text is None
+
+
+class TestPropagacionState:
+    """El estado declarado por la fuente (hoy solo UAM:
+    Resuelta/Abierta/Cerrada/Próxima apertura) debe sobrevivir a `extract`
+    en `Item.extra['state']` (el extractor reconstruye `extra` desde cero)."""
+
+    def test_extract_propaga_state_desde_raw_extra(self):
+        raw = RawItem(
+            source="universidades_madrid",
+            url="https://www.uam.es/detalle",
+            title="Plaza de Enfermería del Trabajo en el Servicio de Prevención",
+            date=date.today(),
+            text="",
+            extra={"uni": "UAM", "state": "Resuelta"},
+        )
+        item = extract(raw)
+        assert item is not None
+        assert item.extra["state"] == "Resuelta"
+
+    def test_extract_sin_state_no_anade_la_clave(self):
+        item = extract(_raw(
+            "Plaza de Enfermería del Trabajo en el Servicio de Prevención"
+        ))
+        assert item is not None
+        assert "state" not in item.extra

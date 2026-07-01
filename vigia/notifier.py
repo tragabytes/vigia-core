@@ -210,6 +210,12 @@ def _format_item(item: Item, today: date) -> list[str]:
         fase_label = FASE_LABEL.get(item.fase, item.fase)
         block.append(f"🪪 Fase: {_escape(fase_label)}")
 
+    # Estado declarado por la fuente (hoy solo UAM: Resuelta/Abierta/Cerrada/
+    # Próxima apertura). Glifo distinto al de Fase para no confundir ambas líneas.
+    state = (item.extra or {}).get("state")
+    if state:
+        block.append(f"🏷️ Estado: {_escape(state)}")
+
     # Requisitos clave (enricher v2): vía de acceso (EIR/habilitación),
     # especialidad exigida, experiencia… lo que el usuario necesita para
     # saber si encaja sin abrir las bases.

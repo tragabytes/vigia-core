@@ -85,3 +85,21 @@ def test_summary_se_escapa_html_correctamente():
     header = lines[0]
     assert "<script>" not in header
     assert "&lt;script&gt;" in header
+
+
+def test_item_con_state_muestra_linea_estado():
+    """Si el Item lleva `extra['state']` (hoy solo UAM), el mensaje incluye
+    una línea 'Estado: …'."""
+    item = _make_item()
+    item.extra = {"state": "Resuelta"}
+    lines = _format_item(item, date(2026, 5, 25))
+    body = "\n".join(lines)
+    assert "Estado: Resuelta" in body
+
+
+def test_item_sin_state_no_muestra_linea_estado():
+    """Sin `extra['state']` (el resto de fuentes) no aparece la línea Estado."""
+    item = _make_item()
+    lines = _format_item(item, date(2026, 5, 25))
+    body = "\n".join(lines)
+    assert "Estado:" not in body

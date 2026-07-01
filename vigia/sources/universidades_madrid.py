@@ -22,12 +22,14 @@ Estado de la implementación (2026-04-28, segunda iteración):
   SANITARIA" en `/laboral/`.
 - **UAM**: 2 listados (`personal-funcionario`, `personal-laboral`).
   Estructura `<div class="uam-card">` con `<span class="uam-becas-status">`
-  + `<span class="uam-becas-date">` + `<p>` con título. **Sin enlace `<a>`
-  por convocatoria** — UAM no expone URL de detalle individual. Generamos
-  URL sintética con fragment determinista (sha1 del título). Match real
-  confirmado: dos resoluciones de Enfermero/a (Servicio de Prevención y
-  Salud) en `personal-funcionario` y una bolsa de Titulado Medio Enfermería
-  del Trabajo en `personal-laboral`.
+  + `<span class="uam-becas-date">` + `<p>` con el título. Cada card está
+  **envuelta por un `<a href>`** que apunta a su página de detalle real;
+  como el `<a>` es ancestro (no descendiente del card) se resuelve con
+  `find_parent`. El título legible se toma del `<p>` — el texto completo del
+  container arranca por estado+fecha ("Resuelta 22/01/2026 …") y enterraría
+  la descripción de la plaza. Match real confirmado: dos resoluciones de
+  Enfermero/a (Servicio de Prevención y Salud) en `personal-funcionario` y
+  una bolsa de Titulado Medio Enfermería del Trabajo en `personal-laboral`.
 
 **Universidades NO implementadas, motivo técnico:**
 
@@ -140,13 +142,17 @@ UNI_CONFIGS: list[UniConfig] = [
         nombre="Universidad de Alcalá",
         base_url="https://www.uah.es",
         listings=[
+            # funcionario/laboral: la estructura real es `ul.main-ul > div`
+            # (con `<a>` descendiente); `ul.main-ul article` matchea 0 hoy y
+            # perdía convocatorias vivas (fallo silencioso, probe verde).
+            # bolsa-de-empleo sí usa `<article>`, se deja tal cual.
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/funcionario/",
-                item_css="ul.main-ul article",
+                item_css="ul.main-ul > div",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/laboral/",
-                item_css="ul.main-ul article",
+                item_css="ul.main-ul > div",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/bolsa-de-empleo/",
@@ -288,9 +294,27 @@ class UniversidadesMadridSource(Source):
             if not _matches_fast_keywords(container_text):
                 continue
 
-            anchor = container.find("a", href=True)
+            # El enlace de detalle puede ser descendiente (UCM/UAH) o el `<a>`
+            # que ENVUELVE la card (UAM no expone `<a>` interno: la card entera
+            # va dentro de un `<a>` al detalle). `find_parent` solo dispara si
+            # no hay descendiente, así que no altera UCM/UAH ni UC3M (sin `<a>`).
+            anchor = container.find("a", href=True) or container.find_parent(
+                "a", href=True
+            )
+
+            # UAM: el título legible está en el `<p>` de la card. El texto
+            # completo del container arranca por estado+fecha y enterraría la
+            # descripción de la plaza; el resto de universidades siguen usando
+            # su `<a>`/container_text.
+            preferred_title: Optional[str] = None
+            if cfg.code == "UAM":
+                p_node = container.find("p")
+                if p_node is not None:
+                    preferred_title = p_node.get_text(" ", strip=True)
+
             title, item_url = _resolve_title_and_url(
-                container_text, anchor, listing.url, cfg.base_url
+                container_text, anchor, listing.url, cfg.base_url,
+                preferred_title=preferred_title,
             )
             if title is None:
                 continue
@@ -354,21 +378,33 @@ def _resolve_title_and_url(
     anchor,
     listing_url: str,
     base_url: str,
+    preferred_title: Optional[str] = None,
 ) -> tuple[Optional[str], Optional[str]]:
     """Devuelve `(title, url)` para un item del listado.
 
-    Tres casos según lo que el container ofrezca:
-    1. **Anchor con texto descriptivo**: `(<a> text, resolved url)`.
-    2. **Anchor sin texto útil** (p.ej. solo "DESCARGAR PDF"): título =
+    Casos según lo que el container ofrezca:
+    1. **Anchor + `preferred_title`** (caso UAM: el `<a>` envolvente da la url
+       de detalle y el `<p>` da el título limpio): `(preferred_title, url)`.
+    2. **Anchor con texto descriptivo**: `(<a> text, resolved url)`.
+    3. **Anchor sin texto útil** (p.ej. solo "DESCARGAR PDF"): título =
        primeras palabras del container, url = href del anchor.
-    3. **Sin anchor** (caso UAM): título = texto del container, url =
-       `listing_url#sha1` para que cada item tenga URL única estable.
+    4. **Sin anchor** (caso UC3M, tabla sin `<a>`): título = texto del
+       container, url = `listing_url#sha1` para que cada item tenga URL
+       única estable.
     """
     if anchor is not None:
         href = anchor.get("href", "").strip()
         if href and not href.startswith(("#", "javascript:")):
             anchor_text = anchor.get_text(" ", strip=True)
             url = _resolve_url(href, base_url)
+            # Título preferente (UAM: el `<p>`). Ya es un título limpio; se
+            # recorta con un tope holgado (320) para no amputar la coletilla
+            # que identifica la plaza (p.ej. "Servicio de Prevención y Salud"),
+            # que en el caso canónico cae más allá de los 280 chars del tope
+            # normal. Va antes que la rama de `anchor_text` porque en UAM el
+            # `<a>` envolvente contiene TODO el texto del card (estado+fecha).
+            if preferred_title:
+                return _trim_title(preferred_title, max_len=320), url
             # Si el `<a>` lleva poco texto (caso UAM "DESCARGAR PDF" o un icon),
             # mejor usar el texto del container, que sí describe la plaza.
             if anchor_text and len(anchor_text) >= 25:

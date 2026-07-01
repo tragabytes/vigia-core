@@ -238,38 +238,53 @@ class TestProbe:
 
 
 # ---------------------------------------------------------------------------
-# UAH — items con `<h4><a>` dentro de `<article>` y `<p>` con fecha hermano.
-# Estructura recortada de https://www.uah.es/es/empleo-publico/PAS/laboral/
-# capturada el 2026-04-28.
+# UAH funcionario/laboral — items como `ul.main-ul > div` (div hijo DIRECTO
+# del ul, HTML inválido pero es la estructura real) con `<h4><a>` dentro y un
+# `<p>` "Resolución DD de mes de YYYY". El selector histórico `ul.main-ul
+# article` matcheaba 0 aquí (fallo silencioso); el real es `ul.main-ul > div`.
 # ---------------------------------------------------------------------------
 
 UAH_LABORAL_HTML = """
 <html><body>
   <div class="wrapper wrapper-box">
     <ul class="list-unstyled main-ul">
+      <div>
+        <p><strong>Resolución</strong> 09 de octubre de 2025</p>
+        <h4 class="title-element">
+          <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-ENFERMERIA-DEL-TRABAJO/">
+            CONVOCATORIA DE PROCESO SELECTIVO PARA LA PROVISIÓN DE LA CATEGORÍA TITULADO/A MEDIO/A,
+            ESPECIALIDAD "ENFERMERÍA DEL TRABAJO-ASISTENCIA MÉDICA SANITARIA"
+          </a>
+        </h4>
+      </div>
+      <div>
+        <p><strong>Resolución</strong> 27 de octubre de 2025</p>
+        <h4 class="title-element">
+          <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-LABORATORIOS/">
+            CONVOCATORIA TÉCNICO ESPECIALISTA, ESPECIALIDAD LABORATORIOS
+          </a>
+        </h4>
+      </div>
+    </ul>
+  </div>
+</body></html>
+"""
+
+
+# UAH bolsa-de-empleo — sí usa `<article>`; su selector se mantiene en
+# `ul.main-ul article`. Fixture aparte para blindar que ese listado sigue
+# funcionando tras cambiar funcionario/laboral a `ul.main-ul > div`.
+UAH_BOLSA_HTML = """
+<html><body>
+  <div class="wrapper wrapper-box">
+    <ul class="list-unstyled main-ul">
       <li>
         <article>
-          <div>
-            <p><strong>Resolución</strong> 09 de octubre de 2025</p>
-            <h4 class="title-element">
-              <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-ENFERMERIA-DEL-TRABAJO/">
-                CONVOCATORIA DE PROCESO SELECTIVO PARA LA PROVISIÓN DE LA CATEGORÍA TITULADO/A MEDIO/A,
-                ESPECIALIDAD "ENFERMERÍA DEL TRABAJO-ASISTENCIA MÉDICA SANITARIA"
-              </a>
-            </h4>
-          </div>
-        </article>
-      </li>
-      <li>
-        <article>
-          <div>
-            <p><strong>Resolución</strong> 27 de octubre de 2025</p>
-            <h4 class="title-element">
-              <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-LABORATORIOS/">
-                CONVOCATORIA TÉCNICO ESPECIALISTA, ESPECIALIDAD LABORATORIOS
-              </a>
-            </h4>
-          </div>
+          <h4 class="title-element">
+            <a href="/es/empleo-publico/PAS/.galleries/Laboral/B1-Enfermeria-03.09.2020.pdf">
+              Bolsa de empleo Enfermería del Trabajo
+            </a>
+          </h4>
         </article>
       </li>
     </ul>
@@ -317,45 +332,80 @@ class TestUahLaboral:
         assert "LABORATORIOS" not in titles_upper
 
 
+class TestUahBolsa:
+    """El listado bolsa-de-empleo usa `<article>` (no `> div`); su selector
+    se mantiene en `ul.main-ul article` y debe seguir extrayendo items tras el
+    cambio de funcionario/laboral a `ul.main-ul > div`."""
+
+    def _patch_get_bolsa_only(self, html: str):
+        empty = _resp("<html><body></body></html>")
+        bolsa_resp = _resp(html)
+
+        def side_effect(url, *args, **kwargs):
+            return bolsa_resp if "bolsa-de-empleo" in url else empty
+
+        return patch.object(
+            universidades_madrid.requests, "get", side_effect=side_effect
+        )
+
+    def test_bolsa_sigue_extrayendo_con_selector_article(self):
+        source = UniversidadesMadridSource()
+        with self._patch_get_bolsa_only(UAH_BOLSA_HTML):
+            items = source.fetch(since_date=date(2000, 1, 1))
+
+        uah_items = [it for it in items if it.extra.get("uni") == "UAH"]
+        assert any("Enfermería del Trabajo" in it.title for it in uah_items)
+
+
 # ---------------------------------------------------------------------------
-# UAM — `<div class="uam-card">` sin `<a>` por convocatoria. URL sintética.
-# Estructura recortada de
+# UAM — `<div class="uam-card">` ENVUELTO por un `<a>` a la página de detalle
+# (el `<a>` es ancestro, no descendiente). El título legible se toma del `<p>`;
+# la URL, del `<a>` envolvente. Estructura recortada de
 # https://www.uam.es/uam/ptgas/listado-concursos-oposiciones-bolsas-personal-funcionario
-# capturada el 2026-04-28.
 # ---------------------------------------------------------------------------
 
-UAM_FUNCIONARIO_HTML = """
+UAM_ENFERMERO_DETALLE_URL = (
+    "https://www.uam.es/uam/ptgas/concursos-oposiciones-bolsas/"
+    "pruebas-selectivas-ingreso-escala-especial-superior-de-servicios-enfermero-mayo-2025"
+)
+
+UAM_FUNCIONARIO_HTML = f"""
 <html><body>
-  <!-- panel de filtros que comparte la clase uam-card y debe ser excluido -->
+  <!-- panel de filtros que comparte la clase uam-card y debe ser excluido.
+       No va envuelto en <a>: no es una convocatoria. -->
   <div class="uam-card uam-filters">
     <div class="uam-filters-header">Filtrar por</div>
     <p>Estado de la convocatoria</p>
   </div>
 
-  <!-- item real con resolución de Enfermero/a -->
-  <div class="uam-card">
-    <span class="uam-becas-status">Resuelta</span>
-    <div class="uam-becas-separator"></div>
-    <span class="uam-becas-date">22/01/2026</span>
-    <p>
-      Pruebas selectivas para el ingreso en la Escala Especial Superior de Servicios
-      de la Universidad Autónoma de Madrid para el Personal Técnico, de Gestión y de
-      Administración y Servicios por el sistema de oposición libre, un puesto de
-      Enfermero/a, en el Servicio de Prevención y Salud
-    </p>
-  </div>
+  <!-- item real: la card entera va DENTRO de un <a> a su página de detalle -->
+  <a href="{UAM_ENFERMERO_DETALLE_URL}">
+    <div class="uam-card">
+      <span class="uam-becas-status">Resuelta</span>
+      <div class="uam-becas-separator"></div>
+      <span class="uam-becas-date">22/01/2026</span>
+      <p>
+        Pruebas selectivas para el ingreso en la Escala Especial Superior de Servicios
+        de la Universidad Autónoma de Madrid para el Personal Técnico, de Gestión y de
+        Administración y Servicios por el sistema de oposición libre, un puesto de
+        Enfermero/a, en el Servicio de Prevención y Salud
+      </p>
+    </div>
+  </a>
 
   <!-- item ruido sin keyword relevante -->
-  <div class="uam-card">
-    <span class="uam-becas-status">Abierta</span>
-    <span class="uam-becas-date">14/04/2026</span>
-    <p>Pruebas selectivas para el ingreso en la Escala Auxiliar Administrativa de la UAM</p>
-  </div>
+  <a href="https://www.uam.es/uam/ptgas/concursos-oposiciones-bolsas/escala-auxiliar-administrativa">
+    <div class="uam-card">
+      <span class="uam-becas-status">Abierta</span>
+      <span class="uam-becas-date">14/04/2026</span>
+      <p>Pruebas selectivas para el ingreso en la Escala Auxiliar Administrativa de la UAM</p>
+    </div>
+  </a>
 </body></html>
 """
 
 
-class TestUamSinAnchor:
+class TestUamCardEnvueltaEnAnchor:
     def _patch_get_uam_only(self, html: str):
         empty = _resp("<html><body></body></html>")
         uam_resp = _resp(html)
@@ -378,24 +428,32 @@ class TestUamSinAnchor:
             assert "Filtrar por" not in it.title
             assert "Estado de la convocatoria" not in it.title
 
-    def test_url_sintetica_con_fragment_hash_cuando_no_hay_anchor(self):
-        """UAM no expone `<a>` por convocatoria → URL = listing + #hash(title)."""
+    def test_uam_captura_url_de_detalle_real(self):
+        """UAM envuelve cada card en un `<a>` (ancestro, no descendiente): la
+        URL debe ser la de la página de detalle real, no una sintética `#hash`."""
         source = UniversidadesMadridSource()
         with self._patch_get_uam_only(UAM_FUNCIONARIO_HTML):
             items = source.fetch(since_date=date(2000, 1, 1))
 
         uam_items = [it for it in items if it.extra.get("uni") == "UAM"]
         enfermero = next(it for it in uam_items if "Enfermero" in it.title)
-        # URL del listado + "#" + hash determinista
-        assert enfermero.url.startswith(
-            "https://www.uam.es/uam/ptgas/listado-concursos-oposiciones-bolsas-personal-"
-        )
-        assert "#" in enfermero.url
-        # Hash consistente entre runs con el mismo título
-        # (sha1 de los primeros 280 chars del título normalizado)
-        digest = enfermero.url.split("#", 1)[1]
-        assert len(digest) == 12
-        assert all(c in "0123456789abcdef" for c in digest)
+        assert enfermero.url == UAM_ENFERMERO_DETALLE_URL
+        assert "#" not in enfermero.url
+
+    def test_uam_titulo_legible_desde_p(self):
+        """El título se toma del `<p>`, no del texto completo del card: empieza
+        por la descripción de la plaza (sin el prefijo "Resuelta 22/01/2026 …")
+        y conserva "Servicio de Prevención y Salud" (no amputada a 280)."""
+        source = UniversidadesMadridSource()
+        with self._patch_get_uam_only(UAM_FUNCIONARIO_HTML):
+            items = source.fetch(since_date=date(2000, 1, 1))
+
+        uam_items = [it for it in items if it.extra.get("uni") == "UAM"]
+        enfermero = next(it for it in uam_items if "Enfermero" in it.title)
+        assert enfermero.title.startswith("Pruebas selectivas")
+        assert "Resuelta" not in enfermero.title
+        assert "22/01/2026" not in enfermero.title
+        assert "Servicio de Prevención y Salud" in enfermero.title
 
     def test_extrae_fecha_ddmmyyyy_del_card(self):
         source = UniversidadesMadridSource()
@@ -409,13 +467,17 @@ class TestUamSinAnchor:
         assert enfermero.date == date(2026, 1, 22)
 
     def test_titulo_se_recorta_si_es_demasiado_largo(self):
-        """Texto del card supera 280 chars → recorte limpio en última palabra."""
+        """Un `<p>` UAM larguísimo se recorta limpio en la última palabra; el
+        tope del título preferente es 320 (holgado, para no amputar plazas
+        de longitud normal como la del enfermero)."""
         long_html = """
         <html><body>
-          <div class="uam-card">
-            <span class="uam-becas-date">01/02/2026</span>
-            <p>Pruebas selectivas para el ingreso de un puesto de Enfermero/a """ + ("muy largo " * 80) + """</p>
-          </div>
+          <a href="https://www.uam.es/uam/ptgas/concursos-oposiciones-bolsas/plaza-larga">
+            <div class="uam-card">
+              <span class="uam-becas-date">01/02/2026</span>
+              <p>Pruebas selectivas para el ingreso de un puesto de Enfermero/a """ + ("muy largo " * 80) + """</p>
+            </div>
+          </a>
         </body></html>
         """
         source = UniversidadesMadridSource()
@@ -424,8 +486,9 @@ class TestUamSinAnchor:
 
         uam_items = [it for it in items if it.extra.get("uni") == "UAM"]
         assert uam_items, "el item con keyword 'enfermer' debe pasar el filtro"
-        assert len(uam_items[0].title) <= 282  # 280 + "…"
+        assert len(uam_items[0].title) <= 322  # 320 + "…"
         assert uam_items[0].title.endswith("…")
+        assert uam_items[0].title.startswith("Pruebas selectivas")
 
 
 # ---------------------------------------------------------------------------
