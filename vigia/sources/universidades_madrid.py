@@ -142,13 +142,17 @@ UNI_CONFIGS: list[UniConfig] = [
         nombre="Universidad de Alcalá",
         base_url="https://www.uah.es",
         listings=[
+            # funcionario/laboral: la estructura real es `ul.main-ul > div`
+            # (con `<a>` descendiente); `ul.main-ul article` matchea 0 hoy y
+            # perdía convocatorias vivas (fallo silencioso, probe verde).
+            # bolsa-de-empleo sí usa `<article>`, se deja tal cual.
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/funcionario/",
-                item_css="ul.main-ul article",
+                item_css="ul.main-ul > div",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/laboral/",
-                item_css="ul.main-ul article",
+                item_css="ul.main-ul > div",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/bolsa-de-empleo/",

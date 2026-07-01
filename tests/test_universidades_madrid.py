@@ -238,38 +238,53 @@ class TestProbe:
 
 
 # ---------------------------------------------------------------------------
-# UAH — items con `<h4><a>` dentro de `<article>` y `<p>` con fecha hermano.
-# Estructura recortada de https://www.uah.es/es/empleo-publico/PAS/laboral/
-# capturada el 2026-04-28.
+# UAH funcionario/laboral — items como `ul.main-ul > div` (div hijo DIRECTO
+# del ul, HTML inválido pero es la estructura real) con `<h4><a>` dentro y un
+# `<p>` "Resolución DD de mes de YYYY". El selector histórico `ul.main-ul
+# article` matcheaba 0 aquí (fallo silencioso); el real es `ul.main-ul > div`.
 # ---------------------------------------------------------------------------
 
 UAH_LABORAL_HTML = """
 <html><body>
   <div class="wrapper wrapper-box">
     <ul class="list-unstyled main-ul">
+      <div>
+        <p><strong>Resolución</strong> 09 de octubre de 2025</p>
+        <h4 class="title-element">
+          <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-ENFERMERIA-DEL-TRABAJO/">
+            CONVOCATORIA DE PROCESO SELECTIVO PARA LA PROVISIÓN DE LA CATEGORÍA TITULADO/A MEDIO/A,
+            ESPECIALIDAD "ENFERMERÍA DEL TRABAJO-ASISTENCIA MÉDICA SANITARIA"
+          </a>
+        </h4>
+      </div>
+      <div>
+        <p><strong>Resolución</strong> 27 de octubre de 2025</p>
+        <h4 class="title-element">
+          <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-LABORATORIOS/">
+            CONVOCATORIA TÉCNICO ESPECIALISTA, ESPECIALIDAD LABORATORIOS
+          </a>
+        </h4>
+      </div>
+    </ul>
+  </div>
+</body></html>
+"""
+
+
+# UAH bolsa-de-empleo — sí usa `<article>`; su selector se mantiene en
+# `ul.main-ul article`. Fixture aparte para blindar que ese listado sigue
+# funcionando tras cambiar funcionario/laboral a `ul.main-ul > div`.
+UAH_BOLSA_HTML = """
+<html><body>
+  <div class="wrapper wrapper-box">
+    <ul class="list-unstyled main-ul">
       <li>
         <article>
-          <div>
-            <p><strong>Resolución</strong> 09 de octubre de 2025</p>
-            <h4 class="title-element">
-              <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-ENFERMERIA-DEL-TRABAJO/">
-                CONVOCATORIA DE PROCESO SELECTIVO PARA LA PROVISIÓN DE LA CATEGORÍA TITULADO/A MEDIO/A,
-                ESPECIALIDAD "ENFERMERÍA DEL TRABAJO-ASISTENCIA MÉDICA SANITARIA"
-              </a>
-            </h4>
-          </div>
-        </article>
-      </li>
-      <li>
-        <article>
-          <div>
-            <p><strong>Resolución</strong> 27 de octubre de 2025</p>
-            <h4 class="title-element">
-              <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-LABORATORIOS/">
-                CONVOCATORIA TÉCNICO ESPECIALISTA, ESPECIALIDAD LABORATORIOS
-              </a>
-            </h4>
-          </div>
+          <h4 class="title-element">
+            <a href="/es/empleo-publico/PAS/.galleries/Laboral/B1-Enfermeria-03.09.2020.pdf">
+              Bolsa de empleo Enfermería del Trabajo
+            </a>
+          </h4>
         </article>
       </li>
     </ul>
@@ -315,6 +330,31 @@ class TestUahLaboral:
 
         titles_upper = " ".join(it.title.upper() for it in items)
         assert "LABORATORIOS" not in titles_upper
+
+
+class TestUahBolsa:
+    """El listado bolsa-de-empleo usa `<article>` (no `> div`); su selector
+    se mantiene en `ul.main-ul article` y debe seguir extrayendo items tras el
+    cambio de funcionario/laboral a `ul.main-ul > div`."""
+
+    def _patch_get_bolsa_only(self, html: str):
+        empty = _resp("<html><body></body></html>")
+        bolsa_resp = _resp(html)
+
+        def side_effect(url, *args, **kwargs):
+            return bolsa_resp if "bolsa-de-empleo" in url else empty
+
+        return patch.object(
+            universidades_madrid.requests, "get", side_effect=side_effect
+        )
+
+    def test_bolsa_sigue_extrayendo_con_selector_article(self):
+        source = UniversidadesMadridSource()
+        with self._patch_get_bolsa_only(UAH_BOLSA_HTML):
+            items = source.fetch(since_date=date(2000, 1, 1))
+
+        uah_items = [it for it in items if it.extra.get("uni") == "UAH"]
+        assert any("Enfermería del Trabajo" in it.title for it in uah_items)
 
 
 # ---------------------------------------------------------------------------
