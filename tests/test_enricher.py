@@ -531,3 +531,19 @@ class TestEnrichPending:
         s.close()
         assert n == 1
         assert row[0] == ENRICHMENT_VERSION
+
+
+class TestEstadoEnContexto:
+    """M5: el estado declarado por la fuente (hoy UAM) se inyecta en el
+    contexto del enricher como pista para `fase` (no como filtro)."""
+
+    def test_build_incluye_estado_si_existe(self):
+        item = _make_item("Convocatoria UAM Enfermería del Trabajo")
+        item.extra = {"state": "Resuelta"}
+        content = enricher._build_initial_user_content(item)
+        assert "Estado declarado por la fuente: Resuelta" in content
+
+    def test_build_omite_estado_si_no_existe(self):
+        item = _make_item("Convocatoria BOE")
+        content = enricher._build_initial_user_content(item)
+        assert "Estado declarado por la fuente" not in content
