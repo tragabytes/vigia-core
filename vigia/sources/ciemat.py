@@ -120,8 +120,14 @@ class CIEMATSource(Source):
                 try:
                     pub_date = datetime.strptime(mm.group(1), "%d/%m/%Y").date()
                 except ValueError:
+                    logger.warning(
+                        "CIEMAT: fecha inválida en '%s' — fallback a today()", title[:80]
+                    )
                     pub_date = date.today()
             else:
+                logger.warning(
+                    "CIEMAT: sin fecha resoluble en '%s' — fallback a today()", title[:80]
+                )
                 pub_date = date.today()
 
             if pub_date < since_date:

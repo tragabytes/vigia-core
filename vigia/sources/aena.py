@@ -114,8 +114,14 @@ class AENASource(Source):
                 try:
                     pub_date = date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
                 except ValueError:
+                    logger.warning(
+                        "AENA: fecha inválida en '%s' — fallback a today()", title[:80]
+                    )
                     pub_date = date.today()
             else:
+                logger.warning(
+                    "AENA: sin fecha de inicio en '%s' — fallback a today()", title[:80]
+                )
                 pub_date = date.today()
 
             if pub_date < since_date:
