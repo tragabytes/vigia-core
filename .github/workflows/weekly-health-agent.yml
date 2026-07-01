@@ -1,0 +1,95 @@
+name: weekly-health-agent
+
+# Agente Claude programado que revisa semanalmente la salud de las fuentes de
+# los bots vigía y, si una fuente está rota por selector/parser (no un timeout
+# transitorio), investiga el HTML en vivo, la corrige y abre un PR en este repo.
+# NUNCA mergea ni pushea a main.
+#
+# Requisito: el secret ANTHROPIC_API_KEY debe existir en este repo
+# (`gh secret set ANTHROPIC_API_KEY -R tragabytes/vigia-core`). Sin él, el run
+# falla sin efectos.
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'      # Lunes 09:00 UTC (tras el cron diario de los bots)
+  workflow_dispatch: {}       # disparo manual para validar
+
+# Alcance mínimo: solo abrir ramas/PRs en ESTE repo (vigia-core).
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: weekly-health-agent
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout vigia-core
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Agente de salud (triage + PR de fix)
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: '--max-turns 40 --model claude-sonnet-5'
+          prompt: |
+            Eres el agente semanal de salud de las fuentes del proyecto "vigía".
+            Estás en un checkout del repo NÚCLEO `tragabytes/vigia-core`. Lee su
+            CLAUDE.md y respétalo (cambios quirúrgicos, no romper contratos ni
+            tests). Tu objetivo: detectar fuentes ROTAS por selector/parser y
+            abrir UN PR de fix por fuente. NO toques timeouts transitorios.
+
+            ## 1. Lee el estado de salud (público, sin credenciales)
+            Descarga estos dos JSON (son el resultado del `--probe` diario de
+            cada bot):
+            - https://raw.githubusercontent.com/tragabytes/vigia-enfermeria/gh-pages/data/sources_status.json
+            - https://raw.githubusercontent.com/tragabytes/vigia-docencia/gh-pages/data/sources_status.json
+            Cada entrada tiene: name, status (ok|error|skipped), code, detail, url.
+
+            ## 2. Clasifica las fuentes en `status == "error"`
+            - ACCIONABLE (selector/parser roto o URL cambiada): el `detail`
+              contiene "el selector no devolvió elementos" (content-check del
+              probe = 0 con HTTP 200), o el `code` es 404/410, o la URL redirige
+              a algo no parseable.
+            - IGNORAR (ruido transitorio): `detail` con "timed out", "Max
+              retries", "Read timed out", "Connection", 5xx puntuales. BOE,
+              BOCM y AENA suelen ser esto — no actúes sobre ellos salvo señal
+              clara de rotura estructural.
+            Si NO hay ninguna fuente accionable, NO hagas cambios: termina
+            explicando "sin roturas de parser esta semana". No abras PRs vacíos.
+
+            ## 3. Para CADA fuente accionable
+            a. Abre `vigia/sources/<fuente>.py` y localiza su URL de listado y su
+               selector CSS/regex.
+            b. Descarga el HTML en vivo (requests + BeautifulSoup 'lxml') e
+               identifica el selector correcto actual (patrón del fix histórico
+               de UAH: `ul.main-ul article` había cambiado a `ul.main-ul > div`;
+               en UAM el `<a>` era ancestro y se resolvió con find_parent).
+            c. Aplica el cambio MÍNIMO en `vigia/sources/<fuente>.py`. Si la
+               fuente tiene `probe_content_count()`, deja el selector coherente
+               con él.
+            d. Instala dependencias y ejecuta los tests; deben quedar verdes:
+               `pip install -r requirements.txt && python -m pytest tests -q`
+               (usa PYTHONIOENCODING=utf-8). Actualiza/añade el test de esa
+               fuente si procede.
+            e. Abre un PR a `main` de vigia-core desde una rama
+               `fix/health-<fuente>` con: diagnóstico (qué cambió en la web),
+               el fix, y confirmación de tests verdes. En el cuerpo, recuerda
+               que al mergear habrá que tag minor + bump de los bots
+               (CLAUDE.md §3.7).
+
+            ## 4. Reglas duras
+            - NUNCA mergees ni hagas push a `main`. Solo ramas + PRs.
+            - Un PR por fuente. Si dudas si es transitorio, NO abras PR: prefiere
+              falso negativo a un PR ruidoso.
+            - No toques los repos de los bots (no tienes permiso aquí); el bump
+              lo hará un humano al revisar el PR de core.
