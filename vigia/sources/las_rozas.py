@@ -83,6 +83,9 @@ class LasRozasSource(Source):
     name = "las_rozas"
     probe_url = LAS_ROZAS_LISTADO_URL
 
+    def probe_content_count(self) -> int:
+        return self._probe_count_selector(self.probe_url, "table tbody tr")
+
     def fetch(self, since_date: date) -> list[RawItem]:
         from bs4 import BeautifulSoup
 

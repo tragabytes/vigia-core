@@ -774,3 +774,24 @@ class TestUamState:
         assert ucm_items
         for it in ucm_items:
             assert "state" not in it.extra
+
+
+class TestUniversidadesProbeContentCount:
+    """El content-check del probe cuenta contenedores crudos por listado y
+    devuelve el MÍNIMO, para que un solo listado roto (caso UAH) marque error."""
+
+    def test_positivo_si_todos_los_listados_rinden(self, monkeypatch):
+        source = UniversidadesMadridSource()
+        monkeypatch.setattr(source, "_probe_count_selector", lambda *a, **k: 5)
+        assert source.probe_content_count() == 5
+
+    def test_cero_si_algun_listado_roto(self, monkeypatch):
+        """Reproduce el bug de UAH: el listado de funcionario rinde 0 aunque el
+        resto tenga items → el mínimo es 0 → el probe lo marcará 'error'."""
+        source = UniversidadesMadridSource()
+
+        def fake(url, selector, exclude_classes=()):
+            return 0 if "/PAS/funcionario/" in url else 5
+
+        monkeypatch.setattr(source, "_probe_count_selector", fake)
+        assert source.probe_content_count() == 0

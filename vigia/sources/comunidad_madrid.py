@@ -64,6 +64,11 @@ class ComunidadMadridSource(Source):
     name = "comunidad_madrid"
     probe_url = SEDE_BASE  # https://sede.comunidad.madrid
 
+    def probe_content_count(self) -> int:
+        # Cuenta la estructura del buscador SIN filtro por término, para
+        # distinguir "pane roto" de "0 resultados de enfermería hoy".
+        return self._probe_count_selector(BUSCADOR_URL, "div.pane-adel ul li")
+
     def fetch(self, since_date: date) -> list[RawItem]:
         all_items: list[RawItem] = []
         seen_urls: set[str] = set()

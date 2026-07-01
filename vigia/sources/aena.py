@@ -51,6 +51,9 @@ class AENASource(Source):
     name = "aena"
     probe_url = AENA_LISTADO_URL
 
+    def probe_content_count(self) -> int:
+        return self._probe_count_selector(self.probe_url, "h3")
+
     def fetch(self, since_date: date) -> list[RawItem]:
         from bs4 import BeautifulSoup
 

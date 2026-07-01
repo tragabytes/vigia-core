@@ -204,6 +204,21 @@ class UniversidadesMadridSource(Source):
     name = "universidades_madrid"
     probe_url = "https://www.ucm.es/convocatorias-vigentes-pas"
 
+    def probe_content_count(self) -> int:
+        # Un solo listado roto (caso UAH: `ul.main-ul article` → 0) no debe
+        # quedar enmascarado por los demás: contamos contenedores crudos por
+        # listado y devolvemos el MÍNIMO, de modo que 0 en CUALQUIERA marque
+        # el probe en error.
+        counts = [
+            self._probe_count_selector(
+                listing.url, listing.item_css,
+                exclude_classes=listing.item_exclude_classes,
+            )
+            for cfg in UNI_CONFIGS
+            for listing in cfg.listings
+        ]
+        return min(counts) if counts else 0
+
     def fetch(self, since_date: date) -> list[RawItem]:
         all_items: list[RawItem] = []
         for cfg in UNI_CONFIGS:
