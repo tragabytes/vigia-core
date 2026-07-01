@@ -430,6 +430,14 @@ def _build_initial_user_content(item: Item) -> str:
     else:
         body_section = "(no disponible)"
 
+    # Estado declarado por la fuente (hoy solo UAM: Resuelta/Abierta/Cerrada/
+    # Próxima apertura). Se pasa como CONTEXTO para afinar `fase`; el prompt
+    # aclara que NO es criterio de `is_relevant`.
+    state = ""
+    if isinstance(item.extra, dict):
+        state = item.extra.get("state") or ""
+    state_line = f"- Estado declarado por la fuente: {state}\n" if state else ""
+
     return (
         "Convocatoria detectada por el sistema:\n"
         f"- Fuente: {item.source}\n"
@@ -437,6 +445,7 @@ def _build_initial_user_content(item: Item) -> str:
         f"- Título: {item.titulo[:300]}\n"
         f"- URL: {item.url}\n"
         f"- Fecha de detección: {item.fecha}\n"
+        f"{state_line}"
         f"- Texto adicional disponible:\n{body_section}\n\n"
         "Devuelve el JSON estructurado siguiendo el schema definido en las "
         "instrucciones del sistema. Llama a `fetch_url` solo si necesitas "

@@ -337,6 +337,7 @@ CRITERIOS PARA `fase`:
 - "calificacion" → resultados de un ejercicio o calificación final
 - "propuesta_nombramiento" → resolución de adjudicación
 - "otro" → cualquier otro estado intermedio
+- Nota: si el sistema aporta "Estado declarado por la fuente" (Resuelta/Abierta/Cerrada/Próxima apertura), úsalo como pista para `fase` (p.ej. Resuelta/Cerrada → propuesta_nombramiento o calificacion; Abierta → convocatoria), NUNCA como criterio de `is_relevant`.
 
 REGLAS DE EXTRACCIÓN:
 - Fechas en formato `YYYY-MM-DD`. Si solo conoces el mes y año, deja `null`.
