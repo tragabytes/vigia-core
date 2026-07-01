@@ -106,6 +106,10 @@ class SapSuccessfactorsSource(Source):
     name = "sap_successfactors"
     probe_url = "https://empleo.renfe.com/search/"
 
+    def probe_content_count(self) -> int:
+        # Valida el render de la instancia SuccessFactors de `probe_url`.
+        return self._probe_count_selector(self.probe_url, "tr.data-row, div.job")
+
     def fetch(self, since_date: date) -> list[RawItem]:
         all_items: list[RawItem] = []
         for emp in SAP_EMPRESAS:

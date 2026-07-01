@@ -112,6 +112,76 @@ class TestSourceProbe:
 
 
 # ---------------------------------------------------------------------------
+# Content-check reforzado (anti "probe ≠ runtime")
+# ---------------------------------------------------------------------------
+
+class TestProbeContentCheck:
+    def _ok_head(self, monkeypatch):
+        head_mock = MagicMock(return_value=MagicMock(status_code=200, reason="OK"))
+        monkeypatch.setattr("vigia.sources.base.requests.head", head_mock)
+
+    def test_error_si_content_count_cero(self, monkeypatch):
+        """HTTP 200 pero el selector no rinde nada → 'error' (caso UAH)."""
+        self._ok_head(monkeypatch)
+
+        class _ZeroSource(_ProbedSource):
+            name = "zero"
+            def probe_content_count(self):
+                return 0
+
+        result = _ZeroSource().probe()
+        assert result["status"] == "error"
+        assert result["code"] == 200
+        assert "selector" in result["detail"].lower()
+
+    def test_ok_si_content_count_positivo(self, monkeypatch):
+        self._ok_head(monkeypatch)
+
+        class _NonZeroSource(_ProbedSource):
+            name = "nonzero"
+            def probe_content_count(self):
+                return 7
+
+        assert _NonZeroSource().probe()["status"] == "ok"
+
+    def test_ok_si_no_hay_override(self, monkeypatch):
+        """Sin override (default None), el probe valida solo HTTP (no-breaking)."""
+        self._ok_head(monkeypatch)
+        assert _ProbedSource().probe()["status"] == "ok"
+
+    def test_error_si_content_check_lanza(self, monkeypatch):
+        self._ok_head(monkeypatch)
+
+        class _RaisingSource(_ProbedSource):
+            name = "raising"
+            def probe_content_count(self):
+                raise RuntimeError("boom")
+
+        result = _RaisingSource().probe()
+        assert result["status"] == "error"
+        assert "content-check" in result["detail"]
+
+    def test_probe_count_selector_cuenta_y_excluye(self, monkeypatch):
+        html = (
+            "<html><body>"
+            "<div class='card'>a</div>"
+            "<div class='card filtro'>panel</div>"
+            "<div class='card'>b</div>"
+            "</body></html>"
+        )
+        get_mock = MagicMock(return_value=MagicMock(
+            status_code=200, text=html, raise_for_status=MagicMock(),
+        ))
+        monkeypatch.setattr("vigia.sources.base.requests.get", get_mock)
+
+        s = _ProbedSource()
+        assert s._probe_count_selector("https://x/listado", "div.card") == 3
+        assert s._probe_count_selector(
+            "https://x/listado", "div.card", exclude_classes=("filtro",)
+        ) == 2
+
+
+# ---------------------------------------------------------------------------
 # Test del flag --probe de main.py
 # ---------------------------------------------------------------------------
 

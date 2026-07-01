@@ -53,6 +53,11 @@ class RTVESource(Source):
     name = "rtve"
     probe_url = RTVE_OFERTAS_URL
 
+    def probe_content_count(self) -> int:
+        return self._probe_count_selector(
+            self.probe_url, "article.cell div.mod.notic_mod"
+        )
+
     def fetch(self, since_date: date) -> list[RawItem]:
         from bs4 import BeautifulSoup
 

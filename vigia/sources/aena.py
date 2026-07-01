@@ -51,6 +51,9 @@ class AENASource(Source):
     name = "aena"
     probe_url = AENA_LISTADO_URL
 
+    def probe_content_count(self) -> int:
+        return self._probe_count_selector(self.probe_url, "h3")
+
     def fetch(self, since_date: date) -> list[RawItem]:
         from bs4 import BeautifulSoup
 
@@ -114,8 +117,14 @@ class AENASource(Source):
                 try:
                     pub_date = date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
                 except ValueError:
+                    logger.warning(
+                        "AENA: fecha inválida en '%s' — fallback a today()", title[:80]
+                    )
                     pub_date = date.today()
             else:
+                logger.warning(
+                    "AENA: sin fecha de inicio en '%s' — fallback a today()", title[:80]
+                )
                 pub_date = date.today()
 
             if pub_date < since_date:

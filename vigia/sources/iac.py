@@ -49,6 +49,11 @@ class IACSource(Source):
     name = "iac"
     probe_url = IAC_LISTADO_URL
 
+    def probe_content_count(self) -> int:
+        return self._probe_count_selector(
+            self.probe_url, "a[href^='/es/ofertas-de-trabajo/']"
+        )
+
     def fetch(self, since_date: date) -> list[RawItem]:
         from bs4 import BeautifulSoup
 
