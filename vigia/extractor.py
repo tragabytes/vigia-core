@@ -102,6 +102,12 @@ def extract(raw: RawItem) -> Optional[Item]:
     if raw.text:
         extra["raw_text"] = raw.text
 
+    # Propagamos el estado declarado por la fuente (hoy solo UAM:
+    # Resuelta/Abierta/Cerrada/Próxima apertura) para que el notifier/enricher
+    # lo tengan. Efímero como raw_text: vive solo durante el run, no se persiste.
+    if raw.extra and raw.extra.get("state"):
+        extra["state"] = raw.extra["state"]
+
     # Para items snapshot (hash-watchers + DetailWatcher) persistimos el
     # cuerpo a `item.raw_text` para que el diff_summarizer (Análisis B)
     # pueda comparar futuras versiones. Para el resto de items dejamos
