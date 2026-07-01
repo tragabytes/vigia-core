@@ -175,6 +175,13 @@ def main() -> None:
         help="Reclasifica items existentes y enriquece con IA los que aún no "
              "tengan summary. No procesa nuevas fuentes ni notifica.",
     )
+    parser.add_argument(
+        "--health-issue",
+        action="store_true",
+        help="Lee sources_status.json (último probe) y abre/actualiza/cierra "
+             "una issue de GitHub con las fuentes en error. No-op sin "
+             "GITHUB_REPOSITORY/GITHUB_TOKEN (runs locales).",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -191,6 +198,12 @@ def main() -> None:
 
     if args.probe:
         sys.exit(_run_probe(enabled_classes))
+
+    if args.health_issue:
+        from vigia import health_alert
+        sys.exit(health_alert.run_health_issue(
+            Path(DASHBOARD_OUT_DIR) / "sources_status.json"
+        ))
 
     if args.maintenance:
         sys.exit(_run_maintenance())
