@@ -40,7 +40,10 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          claude_args: '--max-turns 40 --model claude-sonnet-5'
+          # Sin --allowedTools el agente corre maniatado: el primer run tuvo 5
+          # permission denials y no pudo ni descargar los JSON de salud ni
+          # ejecutar los tests. Bash cubre curl/python/pytest/git/gh.
+          claude_args: '--max-turns 40 --model claude-sonnet-5 --allowedTools Read,Edit,Write,Glob,Grep,Bash,WebFetch'
           prompt: |
             Eres el agente semanal de salud de las fuentes del proyecto "vigía".
             Estás en un checkout del repo NÚCLEO `tragabytes/vigia-core`. Lee su
