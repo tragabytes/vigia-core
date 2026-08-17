@@ -206,6 +206,14 @@ tests/            tests del bot (offline)
   `Profile.source_params={"boe": {...}}`. Los defaults equivalen al perfil enfermería.
 - **Estado aislado:** cada bot fija `VIGIA_STATE_DIR` para que su `seen.db` viva en su
   propio directorio/rama `state`. Nunca comparten estado.
+- **Tests del bot: NUNCA vendorizar tests del core.** `tests/` del bot contiene solo
+  tests de su perfil/fuentes propias (a nivel de comportamiento: `extract()` →
+  match/None/categoría, sin asertar URLs ni constantes internas del core) + un
+  `conftest.py` que fija el perfil con `set_active_profile()` antes de recolectar.
+  El core ya valida su suite antes de taggear (§3.6-3.7); una copia en el bot se
+  desincroniza y rompe cada bump del pin (lección del PR #30 de vigia-enfermeria).
+  La integración real contra el core pineado la da ejecutar el pipeline: el paso
+  `--dry-run` del ci.yml (enfermería) o el propio daily.yml (docencia).
 - **Secrets (3):** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `ANTHROPIC_API_KEY` (esta
   activa el enricher; sin ella el bot corre sin enriquecer).
 
