@@ -247,6 +247,7 @@ los tests existentes. Fijados por los tests:
 `vigia-core` se publica **por copia manual** (snapshot, sin script de sync). Al tocar el core:
 
 1. Commit en el repo del core + **nuevo tag** `vX.Y.Z` (semver; aditivo = minor).
+   El `version` de `pyproject.toml` va **a la par del tag** — bumpéalo en el mismo commit.
 2. **Bumpea** el `requirements.txt` de cada bot al nuevo tag.
 3. Re-verifica el CI de cada bot (instala el tag, tests, dry-run real).
 
