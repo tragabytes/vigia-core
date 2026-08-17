@@ -1,8 +1,12 @@
 """
 Fuente IAC (Instituto de Astrofísica de Canarias) — portal ofertas de trabajo.
 
-URL: https://www.iac.es/es/empleo
+URL: https://www.iac.es/es/ofertas-de-trabajo
 HTTP 200, server-rendered (Drupal). Sin WAF.
+
+(La URL antigua, /es/empleo, ahora es un stub con meta-refresh JS-less a
+/es/ofertas-de-trabajo; `requests` no sigue meta-refresh, así que el
+listado quedaba vacío — 0 elementos, probe en "error".)
 
 Las convocatorias del IAC son mayoritariamente contratos predoctorales y
 postdoctorales de investigación, no plazas estructurales del Servicio de
@@ -39,7 +43,7 @@ from vigia.sources.base import RawItem, Source
 
 logger = logging.getLogger(__name__)
 
-IAC_LISTADO_URL = "https://www.iac.es/es/empleo"
+IAC_LISTADO_URL = "https://www.iac.es/es/ofertas-de-trabajo"
 FETCH_TIMEOUT = 30
 
 _OFFER_HREF_RE = re.compile(r"^/es/ofertas-de-trabajo/")
@@ -50,8 +54,12 @@ class IACSource(Source):
     probe_url = IAC_LISTADO_URL
 
     def probe_content_count(self) -> int:
+        # El listado filtra por defecto a procesos "Abierto"; en días sin
+        # convocatorias abiertas eso da 0 filas aunque el selector funcione.
+        # `state=All` cuenta también resueltos/en proceso para no confundir
+        # "parser roto" con "0 procesos abiertos hoy" (CLAUDE.md regla 6).
         return self._probe_count_selector(
-            self.probe_url, "a[href^='/es/ofertas-de-trabajo/']"
+            f"{self.probe_url}?state=All", "a[href^='/es/ofertas-de-trabajo/']"
         )
 
     def fetch(self, since_date: date) -> list[RawItem]:
