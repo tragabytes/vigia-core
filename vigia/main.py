@@ -115,6 +115,8 @@ def _run_maintenance() -> int:
     cambian).
     """
     storage = Storage()
+    n_purged = maintenance.purgar_snapshots_de_urls_sinteticas(storage)
+    logger.info("Maintenance: %d snapshots de URLs sintéticas purgados", n_purged)
     n_recat = maintenance.reclassify_all(storage)
     logger.info("Maintenance: %d items reclasificados", n_recat)
     n_seen, n_dates = maintenance.recalcular_fechas_comunidad_madrid(storage)

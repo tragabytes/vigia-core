@@ -20,6 +20,48 @@ from vigia.storage import Storage
 logger = logging.getLogger(__name__)
 
 
+def purgar_snapshots_de_urls_sinteticas(storage: Storage) -> int:
+    """Borra los snapshots del DetailWatcher emitidos sobre URLs sintéticas.
+
+    Una URL sintética (`<listado>#<sha1[:12]>`; ver `universidades_madrid`,
+    `aena`, `las_rozas`) apunta al listado entero, no a un detalle: cada
+    cambio de cualquier vecino generaba una fila `[snapshot …]` y un aviso
+    de "ACTUALIZACIÓN" ajeno al item. Caso real UAM (jun-sep 2026): 34
+    filas repetidas en el dashboard y 19 avisos. El DetailWatcher ya no
+    vigila esas URLs (`_SYNTHETIC_URL_RE`); esta tarea limpia lo acumulado.
+
+    Borra solo las filas con `[snapshot` en el título **y** URL sintética
+    (la fila original del item se conserva) y el snapshot de
+    `detail_snapshots` de esas URLs. Idempotente: la segunda pasada borra 0.
+    Devuelve el nº de items borrados.
+    """
+    from vigia.watchers.detail_watcher import _SYNTHETIC_URL_RE
+
+    rows = list(
+        storage._conn.execute(
+            "SELECT id_hash, url FROM items WHERE titulo LIKE '%[snapshot %'"
+        )
+    )
+    victimas = [
+        (id_hash, url) for id_hash, url in rows if _SYNTHETIC_URL_RE.search(url)
+    ]
+    if not victimas:
+        return 0
+
+    urls = sorted({url for _, url in victimas})
+    storage._conn.executemany(
+        "DELETE FROM items WHERE id_hash = ?",
+        [(id_hash,) for id_hash, _ in victimas],
+    )
+    storage._conn.executemany(
+        "DELETE FROM detail_snapshots WHERE url = ?", [(u,) for u in urls]
+    )
+    storage._conn.commit()
+    for url in urls:
+        logger.info("Purgados snapshots de URL sintética %s", url)
+    return len(victimas)
+
+
 def reclassify_all(storage: Storage) -> int:
     """Recategoriza todos los items aplicando `_classify(normalize(titulo))`.
 
