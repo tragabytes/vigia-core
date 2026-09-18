@@ -468,6 +468,45 @@ class TestRecalcularFechasUniversidadesMadrid:
 # Flag --maintenance integrado en main.py
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# purgar_snapshots_de_urls_sinteticas
+# ---------------------------------------------------------------------------
+
+class TestPurgarSnapshotsDeUrlsSinteticas:
+    def test_purga_snapshots_sinteticos_y_respeta_original(self, tmp_path):
+        """Fallo que impide: 34 filas `[snapshot …]` repetidas de la UAM en
+        el dashboard (jun-sep 2026), todas sobre la URL sintética del
+        listado. La fila original y los snapshots de URLs reales quedan."""
+        storage = Storage(db_path=tmp_path / "seen.db")
+        sintetica = "https://uni.example/listado#0123456789ab"
+        real = "https://sede.example/x"
+
+        def _item(url: str, titulo: str) -> Item:
+            return Item(source="universidades_madrid", url=url, titulo=titulo,
+                        fecha=date(2026, 6, 1), categoria="oposicion")
+
+        storage.save(_item(sintetica, "Enfermero/a Prevención"))
+        storage.save(_item(sintetica, "Enfermero/a Prevención [snapshot aaaaaaaaaa]"))
+        storage.save(_item(sintetica, "Enfermero/a Prevención [snapshot bbbbbbbbbb]"))
+        storage.save(_item(real, "Bolsa Enfermería [snapshot cccccccccc]"))
+        storage.upsert_detail_snapshot(sintetica, "aaaaaaaaaa", "body", "2026-06-01T00:00:00")
+        storage.upsert_detail_snapshot(real, "cccccccccc", "body", "2026-06-01T00:00:00")
+
+        n = maintenance.purgar_snapshots_de_urls_sinteticas(storage)
+
+        titulos = sorted(t for _, t, _ in storage.iter_all_items())
+        assert n == 2
+        assert titulos == [
+            "Bolsa Enfermería [snapshot cccccccccc]",
+            "Enfermero/a Prevención",
+        ]
+        assert storage.get_detail_snapshot(sintetica) is None
+        assert storage.get_detail_snapshot(real) is not None
+        # Idempotente
+        assert maintenance.purgar_snapshots_de_urls_sinteticas(storage) == 0
+        storage.close()
+
+
 class TestMainMaintenanceFlag:
     def test_flag_reclasifica_y_no_llama_a_send(
         self, tmp_path, monkeypatch

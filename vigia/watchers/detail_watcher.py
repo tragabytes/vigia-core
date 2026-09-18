@@ -38,6 +38,14 @@ Sources excluidos (`EXCLUDED_SOURCES`):
   específico — vigilarlos otra vez aquí duplicaría snapshots ruidosos.
 - `datos_madrid`: API CKAN JSON, no HTML.
 
+URLs sintéticas (`<listado>#<sha1[:12]>`, las que generan
+`universidades_madrid` / `aena` / `las_rozas` cuando el item no tiene enlace
+propio) tampoco se vigilan (`_SYNTHETIC_URL_RE`): el servidor ignora el
+fragmento y devuelve el LISTADO entero, así que cualquier vecino que cambie
+saltaría como "actualización" del item. Caso real: 19 "ACTUALIZACIÓN" de la
+UAM (jun-sep 2026) sobre convocatorias ajenas a la de Enfermería que motivó
+el item.
+
 Coste estimado: ~20-50 URLs vivas × 1 GET (~20-30s adicionales con
 ThreadPoolExecutor max_workers=4 + timeout 20s por URL).
 """
@@ -45,6 +53,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -91,6 +100,10 @@ FETCH_TIMEOUT = 20
 MAX_BODY_BYTES = 16 * 1024  # cap defensivo al persistir el body
 MAX_WORKERS = 4
 
+# URL sintética `<listado>#<sha1[:12]>`: apunta al listado, no a un detalle.
+# Ver docstring del módulo.
+_SYNTHETIC_URL_RE = re.compile(r"#[0-9a-f]{12}$")
+
 
 @dataclass
 class _FetchResult:
@@ -135,6 +148,19 @@ class DetailWatcher:
         targets = self.storage.iter_live_items_for_detail_watch(
             excluded_sources=self.excluded_sources,
         )
+        # URLs sintéticas: el GET devolvería el listado entero, no un
+        # detalle. Ver docstring del módulo.
+        n_synthetic = sum(
+            1 for _, url, _ in targets if _SYNTHETIC_URL_RE.search(url)
+        )
+        if n_synthetic:
+            targets = [
+                t for t in targets if not _SYNTHETIC_URL_RE.search(t[1])
+            ]
+            logger.info(
+                "DetailWatcher: %d URLs sintéticas de listado saltadas",
+                n_synthetic,
+            )
         if not targets:
             logger.info("DetailWatcher: 0 items vivos para vigilar")
             return []

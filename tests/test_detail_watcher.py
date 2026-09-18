@@ -238,6 +238,40 @@ class TestDetailWatcher:
         s.close()
         assert raws == []
 
+    def test_url_sintetica_de_listado_no_se_vigila(self, tmp_path):
+        """Fallo que impide: 19 "ACTUALIZACIÓN" de la UAM (jun-sep 2026)
+        sobre convocatorias ajenas. El item tenía URL sintética
+        `<listado>#<sha1>`; el GET devuelve el listado entero y cualquier
+        vecino que cambie saltaba como snapshot del item de Enfermería."""
+        s = Storage(db_path=tmp_path / "seen.db")
+        sintetica = "https://uni.example/listado#0123456789ab"
+        _persist_item(s, source="universidades_madrid", url=sintetica,
+                      titulo="Enfermero/a Servicio de Prevención",
+                      deadline_inscripcion="2099-01-01")
+        _persist_item(s, source="canal_isabel_ii",
+                      url="https://canal/real",
+                      titulo="Convocatoria Enfermería del Trabajo",
+                      deadline_inscripcion="2099-01-01")
+        dw = DetailWatcher(s, excluded_sources=frozenset())
+        with patch(
+            "vigia.watchers.detail_watcher.requests.get",
+            return_value=_resp(HTML_BASE),
+        ) as get_seed:
+            dw.run()  # seed
+        with patch(
+            "vigia.watchers.detail_watcher.requests.get",
+            return_value=_resp(HTML_MODIFICADO),
+        ) as get_cambio:
+            raws = dw.run()
+        snap_sintetico = s.get_detail_snapshot(sintetica)
+        s.close()
+        fetched = {c.args[0] for c in get_seed.call_args_list} | {
+            c.args[0] for c in get_cambio.call_args_list
+        }
+        assert fetched == {"https://canal/real"}  # la sintética ni se pide
+        assert snap_sintetico is None
+        assert [r.url for r in raws] == ["https://canal/real"]
+
     def test_http_error_no_detiene_y_queda_en_last_errors(self, tmp_path):
         s = Storage(db_path=tmp_path / "seen.db")
         _persist_item(s, source="canal_isabel_ii",
