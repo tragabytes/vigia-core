@@ -272,6 +272,30 @@ class TestDetailWatcher:
         assert snap_sintetico is None
         assert [r.url for r in raws] == ["https://canal/real"]
 
+    def test_portal_spa_de_rtve_no_se_vigila(self, tmp_path):
+        """Fallo que impide: error diario "cuerpo vacío tras limpieza" en el
+        dashboard (jul-sep 2026). `convocatorias.rtve.es` es una SPA Angular
+        cuyo HTML sin JS está vacío: vigilarla falla siempre. El PDF de bases
+        de la misma fuente sí se sigue vigilando."""
+        s = Storage(db_path=tmp_path / "seen.db")
+        portal = "https://www.convocatorias.rtve.es"
+        pdf = "https://www.rtve.es/bases.pdf"
+        _persist_item(s, source="rtve", url=portal,
+                      titulo="Banco de Datos de Enfermería de Empresa",
+                      deadline_inscripcion="2099-01-01")
+        _persist_item(s, source="rtve", url=pdf,
+                      titulo="Banco de Datos de Enfermería de Empresa",
+                      deadline_inscripcion="2099-01-01")
+        dw = DetailWatcher(s, excluded_sources=frozenset())
+        with patch(
+            "vigia.watchers.detail_watcher.requests.get",
+            return_value=_resp("<html><body></body></html>"),
+        ) as get:
+            dw.run()
+        s.close()
+        assert {c.args[0] for c in get.call_args_list} == {pdf}
+        assert not any("convocatorias.rtve.es" in e for e in dw.last_errors)
+
     def test_http_error_no_detiene_y_queda_en_last_errors(self, tmp_path):
         s = Storage(db_path=tmp_path / "seen.db")
         _persist_item(s, source="canal_isabel_ii",

@@ -235,7 +235,7 @@ de lo ya visto (lección de la Fase 4):
 
 ### 3.6 Tocar el core: contratos que NO se rompen
 
-Cambios al core = **aditivos** y con la suite verde (**546 passed, 2 skipped** a v0.8.2) sin tocar
+Cambios al core = **aditivos** y con la suite verde (**547 passed, 2 skipped** a v0.8.3) sin tocar
 los tests existentes. Fijados por los tests:
 
 - `extract(raw)` mantiene su firma (regex cacheada por perfil; se recompila al cambiar de perfil).
