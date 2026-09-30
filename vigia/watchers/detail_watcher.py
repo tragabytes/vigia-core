@@ -46,6 +46,11 @@ saltaría como "actualización" del item. Caso real: 19 "ACTUALIZACIÓN" de la
 UAM (jun-sep 2026) sobre convocatorias ajenas a la de Enfermería que motivó
 el item.
 
+Portales SPA (`_SPA_HOSTS`, p.ej. `convocatorias.rtve.es`): su HTML sin JS es
+un shell vacío, así que el GET da "cuerpo vacío tras limpieza" en cada run y
+ensucia el dashboard con un error diario. Se saltan por host; el resto de URLs
+de la misma fuente (p.ej. el PDF de bases de RTVE) se siguen vigilando.
+
 Coste estimado: ~20-50 URLs vivas × 1 GET (~20-30s adicionales con
 ThreadPoolExecutor max_workers=4 + timeout 20s por URL).
 """
@@ -58,6 +63,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from typing import Optional
+from urllib.parse import urlparse
 
 import requests
 
@@ -103,6 +109,9 @@ MAX_WORKERS = 4
 # URL sintética `<listado>#<sha1[:12]>`: apunta al listado, no a un detalle.
 # Ver docstring del módulo.
 _SYNTHETIC_URL_RE = re.compile(r"#[0-9a-f]{12}$")
+
+# Hosts SPA cuyo HTML sin JS está vacío. Ver docstring del módulo.
+_SPA_HOSTS = frozenset({"www.convocatorias.rtve.es", "convocatorias.rtve.es"})
 
 
 @dataclass
@@ -161,6 +170,12 @@ class DetailWatcher:
                 "DetailWatcher: %d URLs sintéticas de listado saltadas",
                 n_synthetic,
             )
+        n_spa = sum(1 for _, url, _ in targets if urlparse(url).hostname in _SPA_HOSTS)
+        if n_spa:
+            targets = [
+                t for t in targets if urlparse(t[1]).hostname not in _SPA_HOSTS
+            ]
+            logger.info("DetailWatcher: %d URLs de portal SPA saltadas", n_spa)
         if not targets:
             logger.info("DetailWatcher: 0 items vivos para vigilar")
             return []
