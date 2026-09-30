@@ -57,7 +57,7 @@ class IACSource(Source):
         # El listado filtra por defecto a procesos "Abierto"; en días sin
         # convocatorias abiertas eso da 0 filas aunque el selector funcione.
         # `state=All` cuenta también resueltos/en proceso para no confundir
-        # "parser roto" con "0 procesos abiertos hoy" (CLAUDE.md regla 6).
+        # "parser roto" con "0 procesos abiertos hoy" (CLAUDE.md regla 2).
         return self._probe_count_selector(
             f"{self.probe_url}?state=All", "a[href^='/es/ofertas-de-trabajo/']"
         )
