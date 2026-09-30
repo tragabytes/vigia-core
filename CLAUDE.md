@@ -235,7 +235,7 @@ de lo ya visto (lección de la Fase 4):
 
 ### 3.6 Tocar el core: contratos que NO se rompen
 
-Cambios al core = **aditivos** y con la suite verde (**472 passed, 2 skipped**) sin tocar
+Cambios al core = **aditivos** y con la suite verde (**546 passed, 2 skipped** a v0.8.2) sin tocar
 los tests existentes. Fijados por los tests:
 
 - `extract(raw)` mantiene su firma (regex cacheada por perfil; se recompila al cambiar de perfil).
@@ -258,7 +258,8 @@ los tests existentes. Fijados por los tests:
 - **Python 3.9** (`requires-python = ">=3.9"`): el código debe ser 3.9-compatible —
   nada de `X | Y` en runtime; usa `from __future__ import annotations`.
 - **Windows:** `--probe`/`--dry-run` revientan con `UnicodeEncodeError` (cp1252) al
-  imprimir `→`; exporta `PYTHONIOENCODING=utf-8` para esas verificaciones.
+  imprimir `→`; exporta `PYTHONIOENCODING=utf-8` para esas verificaciones (y para la
+  suite: sin ello falla `test_probe.py::test_exit_code_1_si_alguna_fuente_falla`).
 - **pytest:** en shells que rompen la captura por descriptores de fichero, usa
   `python -m pytest tests --capture=no`.
 
