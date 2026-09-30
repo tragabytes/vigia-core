@@ -21,3 +21,4 @@ Lee, por este orden:
 **Por dónde seguir:**
 1. Si Laureano aprueba la spec 001: fusionar su PR y pasar a la misma forma `vigia-enfermeria` y `vigia-docencia` (tareas en `specs/001-forma-de-trabajo/tasks.md`).
 2. Datos desactualizados vistos de paso, sin tocar: `README.md` del núcleo dice instalar `@v0.4.4`, y el `CLAUDE.md` de vigia-docencia dice que consume `vigia-core@v0.4.4` (va por v0.8.3).
+3. Test que falla solo de madrugada en local: `test_dashboard.py::TestMetaJson::test_total_y_total_today` compara `date.today()` (hora local) con `first_seen_at` en UTC, así que entre las 00:00 y las 02:00 de Madrid da 0 en vez de 2. En Actions (UTC) no pasa y producción no se ve afectada. Visto el 1/10 a las 00:14; sin tocar.
