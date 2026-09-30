@@ -91,7 +91,7 @@ jobs:
                `fix/health-<fuente>` con: diagnóstico (qué cambió en la web),
                el fix, y confirmación de tests verdes. En el cuerpo, recuerda
                que al mergear habrá que tag minor + bump de los bots
-               (CLAUDE.md §3.7).
+               (MANTENIMIENTO.md §5).
 
             ## 4. Reglas duras
             - NUNCA mergees ni hagas push a `main`. Solo ramas + PRs.
