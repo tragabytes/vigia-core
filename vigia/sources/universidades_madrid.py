@@ -142,17 +142,21 @@ UNI_CONFIGS: list[UniConfig] = [
         nombre="Universidad de Alcalá",
         base_url="https://www.uah.es",
         listings=[
-            # funcionario/laboral: la estructura real es `ul.main-ul > div`
-            # (con `<a>` descendiente); `ul.main-ul article` matchea 0 hoy y
-            # perdía convocatorias vivas (fallo silencioso, probe verde).
+            # funcionario/laboral (rediseño 2026-10): `ul.main-ul` desapareció
+            # del todo; cada convocatoria es ahora un
+            # `blockquote.u-block-hover` dentro de pestañas por año
+            # (`div[role=tabpanel]` id `pasFuncionario-anio-2026`, `...-2025`,
+            # `...-2024`), con el `<a>` de detalle como descendiente directo
+            # (sin texto propio, por lo que el título sigue resolviéndose
+            # desde `container_text` como ya hacía el selector anterior).
             # bolsa-de-empleo sí usa `<article>`, se deja tal cual.
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/funcionario/",
-                item_css="ul.main-ul > div",
+                item_css="blockquote.u-block-hover",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/laboral/",
-                item_css="ul.main-ul > div",
+                item_css="blockquote.u-block-hover",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/bolsa-de-empleo/",
