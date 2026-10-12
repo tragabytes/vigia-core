@@ -238,34 +238,57 @@ class TestProbe:
 
 
 # ---------------------------------------------------------------------------
-# UAH funcionario/laboral — items como `ul.main-ul > div` (div hijo DIRECTO
-# del ul, HTML inválido pero es la estructura real) con `<h4><a>` dentro y un
-# `<p>` "Resolución DD de mes de YYYY". El selector histórico `ul.main-ul
-# article` matcheaba 0 aquí (fallo silencioso); el real es `ul.main-ul > div`.
+# UAH funcionario/laboral — rediseño 2026: items como `blockquote.u-block-hover`
+# (year tabs dentro de `div.tab-content`), con `<h3>` título, `<p>` descripción
+# y fecha "Fecha Resolución: DD/MM/YYYY" en un `<span>`. El `<a>` de detalle es
+# un overlay SIN texto al final del blockquote (hermano del `div.row` con el
+# contenido) — por eso el título resuelto cae en el fallback de
+# `_resolve_title_and_url` que usa `container_text` completo. El selector
+# histórico `ul.main-ul > div` matcheaba 0 aquí (fallo silencioso); el real es
+# `blockquote.u-block-hover`.
 # ---------------------------------------------------------------------------
 
 UAH_LABORAL_HTML = """
 <html><body>
-  <div class="wrapper wrapper-box">
-    <ul class="list-unstyled main-ul">
-      <div>
-        <p><strong>Resolución</strong> 09 de octubre de 2025</p>
-        <h4 class="title-element">
-          <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-ENFERMERIA-DEL-TRABAJO/">
-            CONVOCATORIA DE PROCESO SELECTIVO PARA LA PROVISIÓN DE LA CATEGORÍA TITULADO/A MEDIO/A,
-            ESPECIALIDAD "ENFERMERÍA DEL TRABAJO-ASISTENCIA MÉDICA SANITARIA"
-          </a>
-        </h4>
-      </div>
-      <div>
-        <p><strong>Resolución</strong> 27 de octubre de 2025</p>
-        <h4 class="title-element">
-          <a href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-LABORATORIOS/">
-            CONVOCATORIA TÉCNICO ESPECIALISTA, ESPECIALIDAD LABORATORIOS
-          </a>
-        </h4>
-      </div>
-    </ul>
+  <div class="tab-content" id="pestana">
+    <div class="tab-pane fade active show" id="pasLaboral-anio-2026">
+      <blockquote class="u-block-hover u-shadow-v37--hover g-bg-gray-light-v5 rounded g-pa-30 mb-4">
+        <div class="row align-items-lg-center">
+          <div class="col-lg-10">
+            <span class="g-font-size-12">
+              <i class="fa fa-calendar"></i>
+              Fecha Resolución: 09/10/2025 - <strong>PAS Laboral</strong>
+            </span>
+            <h3 class="h6 text-uppercase">
+              CONVOCATORIA DE PROCESO SELECTIVO PARA LA PROVISIÓN DE LA CATEGORÍA TITULADO/A MEDIO/A,
+              ESPECIALIDAD "ENFERMERÍA DEL TRABAJO-ASISTENCIA MÉDICA SANITARIA"
+            </h3>
+            <div class="g-font-size-13 g-mb-10">
+              <p>Resolución de 09 de octubre de 2025 de la Gerencia de la Universidad de Alcalá</p>
+            </div>
+          </div>
+          <div class="col-lg-2">
+            <span class="u-label u-label-danger">Plazo cerrado</span>
+          </div>
+        </div>
+        <a class="u-link-v2" href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-ENFERMERIA-DEL-TRABAJO/"></a>
+      </blockquote>
+      <blockquote class="u-block-hover u-shadow-v37--hover g-bg-gray-light-v5 rounded g-pa-30 mb-4">
+        <div class="row align-items-lg-center">
+          <div class="col-lg-10">
+            <span class="g-font-size-12">
+              <i class="fa fa-calendar"></i>
+              Fecha Resolución: 27/10/2025 - <strong>PAS Laboral</strong>
+            </span>
+            <h3 class="h6 text-uppercase">CONVOCATORIA TÉCNICO ESPECIALISTA, ESPECIALIDAD LABORATORIOS</h3>
+          </div>
+          <div class="col-lg-2">
+            <span class="u-label u-label-danger">Plazo cerrado</span>
+          </div>
+        </div>
+        <a class="u-link-v2" href="/es/empleo-publico/PAS/convocatoria/CONVOCATORIA-LABORATORIOS/"></a>
+      </blockquote>
+    </div>
   </div>
 </body></html>
 """
@@ -273,7 +296,7 @@ UAH_LABORAL_HTML = """
 
 # UAH bolsa-de-empleo — sí usa `<article>`; su selector se mantiene en
 # `ul.main-ul article`. Fixture aparte para blindar que ese listado sigue
-# funcionando tras cambiar funcionario/laboral a `ul.main-ul > div`.
+# funcionando tras cambiar funcionario/laboral a `blockquote.u-block-hover`.
 UAH_BOLSA_HTML = """
 <html><body>
   <div class="wrapper wrapper-box">
@@ -333,9 +356,9 @@ class TestUahLaboral:
 
 
 class TestUahBolsa:
-    """El listado bolsa-de-empleo usa `<article>` (no `> div`); su selector
+    """El listado bolsa-de-empleo usa `<article>` (no `blockquote`); su selector
     se mantiene en `ul.main-ul article` y debe seguir extrayendo items tras el
-    cambio de funcionario/laboral a `ul.main-ul > div`."""
+    cambio de funcionario/laboral a `blockquote.u-block-hover`."""
 
     def _patch_get_bolsa_only(self, html: str):
         empty = _resp("<html><body></body></html>")

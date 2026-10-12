@@ -142,17 +142,21 @@ UNI_CONFIGS: list[UniConfig] = [
         nombre="Universidad de Alcalá",
         base_url="https://www.uah.es",
         listings=[
-            # funcionario/laboral: la estructura real es `ul.main-ul > div`
-            # (con `<a>` descendiente); `ul.main-ul article` matchea 0 hoy y
-            # perdía convocatorias vivas (fallo silencioso, probe verde).
-            # bolsa-de-empleo sí usa `<article>`, se deja tal cual.
+            # funcionario/laboral: rediseño 2026 sustituyó `ul.main-ul` por
+            # tarjetas `blockquote.u-block-hover` (year tabs dentro de
+            # `div.tab-content`); `ul.main-ul > div` matchea 0 hoy y perdía
+            # convocatorias vivas (fallo silencioso, probe verde). El `<a>`
+            # de detalle es un overlay sin texto al final del blockquote
+            # (hermano del `div.row` con título/fecha), por eso cae en la
+            # rama de `_resolve_title_and_url` que usa `container_text` como
+            # título. bolsa-de-empleo sigue usando `<article>`, se deja tal cual.
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/funcionario/",
-                item_css="ul.main-ul > div",
+                item_css="blockquote.u-block-hover",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/laboral/",
-                item_css="ul.main-ul > div",
+                item_css="blockquote.u-block-hover",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/bolsa-de-empleo/",
