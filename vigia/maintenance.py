@@ -133,7 +133,7 @@ def recalcular_fechas_comunidad_madrid(storage: Storage) -> tuple[int, int]:
 def recalcular_fechas_universidades_madrid(storage: Storage) -> tuple[int, int]:
     """Recalcula la fecha de publicación de items de Universidades de Madrid.
 
-    Paralelo a `recalcular_fechas_comunidad_madrid` (regla 8 del CLAUDE.md):
+    Paralelo a `recalcular_fechas_comunidad_madrid` (regla 4 del CLAUDE.md):
     `universidades_madrid.py` también tiene una cascada con `today()` como
     último fallback. Si el regex de fecha falla (cambio de layout en
     UCM/UAH/UAM), los items quedan congelados con la fecha del run en que

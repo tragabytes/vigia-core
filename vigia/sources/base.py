@@ -135,7 +135,7 @@ class Source(ABC):
             }
 
         # HTTP OK: validación de contenido opcional (anti "probe ≠ runtime",
-        # CLAUDE.md regla 9). Si la fuente implementa `probe_content_count()`
+        # CLAUDE.md regla 5). Si la fuente implementa `probe_content_count()`
         # y devuelve 0, el selector/regex no rinde nada aunque la URL responda
         # 200 → parser roto / estructura cambiada.
         try:
