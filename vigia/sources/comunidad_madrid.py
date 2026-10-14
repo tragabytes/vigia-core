@@ -56,8 +56,11 @@ DATE_FROM_TEXT_RE = re.compile(r"(\d{2}/\d{2}/\d{4})")
 
 # 2026-05-05: subido de 15→30 (detalle) y 20→30 (listado) tras pérdida silenciosa
 # por timeouts cuando sede.comunidad.madrid iba lenta — ver run 25369854357.
+# 2026-10-14: listado 30→60 y un reintento tras timeout. En frío el buscador
+# tarda 13-43 s (7 de 10 dailies del 1-14/10 perdieron alguna página); repetida,
+# la misma búsqueda responde en 0,5 s porque el servidor la cachea.
 DETAIL_TIMEOUT = 30
-LISTING_TIMEOUT = 30
+LISTING_TIMEOUT = 60
 
 
 class ComunidadMadridSource(Source):
@@ -91,9 +94,14 @@ class ComunidadMadridSource(Source):
         while True:
             url = f"{BUSCADOR_URL}&t={term}&page={page}"
             try:
-                resp = requests.get(
-                    url, headers=self._default_headers(), timeout=LISTING_TIMEOUT
-                )
+                try:
+                    resp = requests.get(
+                        url, headers=self._default_headers(), timeout=LISTING_TIMEOUT
+                    )
+                except requests.exceptions.Timeout:
+                    resp = requests.get(
+                        url, headers=self._default_headers(), timeout=LISTING_TIMEOUT
+                    )
                 resp.raise_for_status()
             except Exception as exc:
                 logger.warning("Comunidad Madrid error (term=%s page=%d): %s", term, page, exc)
