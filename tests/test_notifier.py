@@ -103,3 +103,22 @@ def test_item_sin_state_no_muestra_linea_estado():
     lines = _format_item(item, date(2026, 5, 25))
     body = "\n".join(lines)
     assert "Estado:" not in body
+
+
+def test_envio_correcto_queda_en_el_log(monkeypatch, caplog):
+    """Fallo que impide: el 14/10/2026 no había forma de confirmar desde el
+    log de Actions que el aviso de Enfermería del Trabajo llegó a Telegram:
+    solo se registraban los envíos fallidos."""
+    import logging
+    from unittest.mock import MagicMock
+    from vigia import notifier
+
+    monkeypatch.setattr(notifier, "TELEGRAM_BOT_TOKEN", "t")
+    monkeypatch.setattr(notifier, "TELEGRAM_CHAT_ID", "1,2")
+    monkeypatch.setattr(
+        notifier.requests, "post", MagicMock(return_value=MagicMock(ok=True))
+    )
+    with caplog.at_level(logging.INFO, logger="vigia.notifier"):
+        notifier._send_chunk("hola")
+
+    assert "Telegram: mensaje enviado a 2/2 destinatarios" in caplog.text
