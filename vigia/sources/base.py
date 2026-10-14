@@ -149,12 +149,18 @@ class Source(ABC):
                 "detail": f"content-check falló: {exc}",
             }
         if count == 0:
+            detail = "HTTP OK pero el selector no devolvió elementos (posible parser roto)"
+            # Fuentes con varios listados dicen cuál está vacío: `url` es solo
+            # `probe_url` y puede no ser el roto.
+            empty = getattr(self, "probe_empty_listings", None)
+            if empty:
+                detail += " — listados vacíos: " + ", ".join(empty)
             return {
                 "name": self.name,
                 "status": "error",
                 "code": resp.status_code,
                 "url": self.probe_url,
-                "detail": "HTTP OK pero el selector no devolvió elementos (posible parser roto)",
+                "detail": detail,
             }
 
         return {
