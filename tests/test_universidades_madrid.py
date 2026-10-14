@@ -332,6 +332,60 @@ class TestUahLaboral:
         assert "LABORATORIOS" not in titles_upper
 
 
+class TestUahPestanasPorAnio:
+    """Fallo que impide: desde ~17/09/2026 la UAH sirve funcionario/laboral en
+    pestañas por año (`div.tab-content` > `blockquote`, con `<a>` vacío y el
+    título en `<h3>`). `ul.main-ul > div` matcheaba 0: probe en error a diario
+    y convocatorias nuevas de la UAH invisibles."""
+
+    HTML = """
+    <html><body>
+      <div class="tab-content g-pt-20"><div class="tab-pane active" id="pasLaboral-anio-2025">
+        <blockquote class="u-block-hover rounded">
+          <div class="row"><div class="col-lg-10">
+            <span>Fecha Resolución: 09/10/2025 - <strong>PAS Laboral</strong></span>
+            <h3 class="h6 text-uppercase">CONVOCATORIA DE PROCESO SELECTIVO, ESPECIALIDAD
+              "ENFERMERÍA DEL TRABAJO-ASISTENCIA MÉDICA SANITARIA"</h3>
+            <div><p>Resolución de 9 de octubre de 2025, de la Universidad de Alcalá.</p></div>
+          </div></div>
+          <a class="u-link-v2" href="/es/empleo-publico/PAS/convocatoria/ENFERMERIA-DEL-TRABAJO-00001/"></a>
+        </blockquote>
+        <blockquote class="u-block-hover rounded">
+          <span>Fecha Resolución: 27/10/2025 - <strong>PAS Laboral</strong></span>
+          <h3>CONVOCATORIA TÉCNICO ESPECIALISTA, ESPECIALIDAD AUDIOVISUALES</h3>
+          <a class="u-link-v2" href="/es/empleo-publico/PAS/convocatoria/AUDIOVISUALES/"></a>
+        </blockquote>
+      </div></div>
+    </body></html>
+    """
+
+    def test_extrae_item_con_titulo_del_h3(self):
+        source = UniversidadesMadridSource()
+        with TestUahLaboral()._patch_get_uah_only(self.HTML):
+            items = source.fetch(since_date=date(2000, 1, 1))
+
+        uah = [it for it in items if it.extra.get("uni") == "UAH"]
+        assert uah, "la estructura de pestañas no produce items"
+        it = uah[0]
+        assert it.url == ("https://www.uah.es/es/empleo-publico/PAS/convocatoria/"
+                          "ENFERMERIA-DEL-TRABAJO-00001/")
+        assert it.title.startswith("CONVOCATORIA DE PROCESO SELECTIVO")
+        assert "ENFERMERÍA DEL TRABAJO" in it.title
+        assert it.date == date(2025, 10, 9)
+        assert all("AUDIOVISUALES" not in i.title for i in uah)
+
+    def test_probe_cuenta_los_bloques(self):
+        source = UniversidadesMadridSource()
+        uah = next(c for c in universidades_madrid.UNI_CONFIGS if c.code == "UAH")
+        listing = uah.listings[0]  # funcionario
+        with TestUahLaboral()._patch_get_uah_only(self.HTML):
+            n = source._probe_count_selector(
+                listing.url, listing.item_css,
+                exclude_classes=listing.item_exclude_classes,
+            )
+        assert n == 2
+
+
 class TestUahBolsa:
     """El listado bolsa-de-empleo usa `<article>` (no `> div`); su selector
     se mantiene en `ul.main-ul article` y debe seguir extrayendo items tras el
