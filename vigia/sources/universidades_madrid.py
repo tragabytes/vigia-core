@@ -212,15 +212,18 @@ class UniversidadesMadridSource(Source):
         # quedar enmascarado por los demás: contamos contenedores crudos por
         # listado y devolvemos el MÍNIMO, de modo que 0 en CUALQUIERA marque
         # el probe en error.
-        counts = [
-            self._probe_count_selector(
+        counts = {
+            listing.url: self._probe_count_selector(
                 listing.url, listing.item_css,
                 exclude_classes=listing.item_exclude_classes,
             )
             for cfg in UNI_CONFIGS
             for listing in cfg.listings
-        ]
-        return min(counts) if counts else 0
+        }
+        # El probe enseña `probe_url` (UCM); sin esto, un 0 en otro listado
+        # mandaba a mirar la UCM (caso UAH sep-oct 2026).
+        self.probe_empty_listings = [u for u, n in counts.items() if n == 0]
+        return min(counts.values()) if counts else 0
 
     def fetch(self, since_date: date) -> list[RawItem]:
         all_items: list[RawItem] = []

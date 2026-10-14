@@ -236,6 +236,25 @@ class TestProbe:
         source = UniversidadesMadridSource()
         assert source.probe_url == "https://www.ucm.es/convocatorias-vigentes-pas"
 
+    def test_probe_en_error_dice_que_listado_esta_vacio(self):
+        """Fallo que impide: del 17/09 al 14/10/2026 el probe dio "selector no
+        devolvió elementos" con la URL de la UCM, pero el listado vacío era el
+        de la UAH. El agente semanal de salud miró la UCM, la vio sana y no
+        abrió PR en cuatro semanas."""
+        source = UniversidadesMadridSource()
+        uah_vacia = "https://www.uah.es/es/empleo-publico/PAS/funcionario/"
+
+        def contar(url, css, exclude_classes=()):
+            return 0 if url == uah_vacia else 5
+
+        head = MagicMock(status_code=200)
+        with patch.object(source, "_probe_count_selector", side_effect=contar), \
+                patch("vigia.sources.base.requests.head", return_value=head):
+            result = source.probe()
+
+        assert result["status"] == "error"
+        assert uah_vacia in result["detail"]
+
 
 # ---------------------------------------------------------------------------
 # UAH funcionario/laboral — items como `ul.main-ul > div` (div hijo DIRECTO
