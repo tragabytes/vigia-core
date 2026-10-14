@@ -209,3 +209,48 @@ class TestCascada:
                 )
         assert item.date == date.today()
         assert any("sin fecha resoluble" in rec.message for rec in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# Timeouts del buscador
+# ---------------------------------------------------------------------------
+
+
+class TestListadoReintentaTrasTimeout:
+    """Fallo que impide: del 1 al 14/10/2026, 7 de 10 dailies perdieron alguna
+    página del buscador por "Read timed out (30s)". En frío el buscador tarda
+    13-43 s; repetida, la misma búsqueda responde en 0,5 s (caché del
+    servidor). Un reintento recupera la página."""
+
+    def test_timeout_seguido_de_respuesta_no_pierde_la_pagina(self):
+        import requests
+
+        html = (
+            '<div class="pane-adel"><ul>'
+            + _listing_li("Inicio: 01/10/2026")
+            + "</ul></div>"
+        )
+        source = ComunidadMadridSource()
+        with patch.object(
+            comunidad_madrid.requests, "get",
+            side_effect=[requests.exceptions.ReadTimeout("lento"), _resp(html)],
+        ) as get:
+            items = source._fetch_term("enfermeria", date(2026, 1, 1), set())
+
+        assert get.call_count == 2
+        assert [it.title for it in items] == ["Bolsa de Enfermería del Trabajo (2024)"]
+        assert source.last_errors == []
+
+    def test_dos_timeouts_seguidos_si_cuentan_como_error(self):
+        import requests
+
+        source = ComunidadMadridSource()
+        with patch.object(
+            comunidad_madrid.requests, "get",
+            side_effect=requests.exceptions.ReadTimeout("lento"),
+        ) as get:
+            items = source._fetch_term("enfermeria", date(2026, 1, 1), set())
+
+        assert get.call_count == 2
+        assert items == []
+        assert len(source.last_errors) == 1
