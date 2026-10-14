@@ -9,16 +9,21 @@ Seguimos con vigia. Todo en español, también tu razonamiento y las descripcion
 Lee, por este orden:
 1. `CLAUDE.md` (mapa y reglas propias).
 2. `DECISIONES.md`, sobre todo lo que lleva ❓.
-3. `MANTENIMIENTO.md`, según lo que toque.
+3. El `RELEVO.md` del bot que toque (`vigia-enfermeria`, `vigia-docencia`): ahí están sus pendientes.
+4. `MANTENIMIENTO.md`, según lo que toque.
 
-**Estado (1/10, madrugada).**
-- Núcleo en **v0.8.3**; los dos bots, pineados a v0.8.3.
-- La forma de trabajar de temario-eir (spec 001) está en un **PR en borrador sin fusionar**, esperando el visto bueno de Laureano.
+**Estado (14/10, noche).**
+- Núcleo en **v0.8.5**; los dos bots, pineados a v0.8.5.
+- Los tres repos trabajan ya con la forma de temario-eir (spec 001 cerrada).
 
-**Por comprobar:**
-1. **RTVE (v0.8.3)**: en el primer daily de vigia-enfermeria del 1/10 o posterior, el log debe decir `DetailWatcher: 1 URLs de portal SPA saltadas`, no debe salir la línea `cuerpo vacío tras limpieza` de `convocatorias.rtve.es`, y si no hay otras fuentes con errores, no debe salir `fuentes con errores`. Cómo mirarlo: `MANTENIMIENTO.md` §3.
+**Por comprobar en el primer daily del 15/10 o posterior** (cómo: `MANTENIMIENTO.md` §3):
+1. **UAH (v0.8.4)**: el probe de `universidades_madrid` debe salir `ok` en vigia-enfermeria. Si sale `error`, el aviso ya dirá qué listado está vacío.
+2. **Comunidad de Madrid (v0.8.4)**: `comunidad_madrid … 0 errores` la mayoría de los días; algún `Read timed out` suelto puede seguir, pero ya no el 70 % de los días.
+3. **Telegram (v0.8.5)**: cuando haya avisos, el log debe tener `Telegram: mensaje enviado a N/N destinatarios`.
+4. **Dashboards**: las tarjetas deben decir `AI SUMMARY (claude-sonnet-4-6)`, no `pending enrichment`.
+5. El issue abierto en vigia-enfermeria («Fuentes con error en el probe») debería cerrarse cuando el probe salga limpio.
 
 **Por dónde seguir:**
-1. Si Laureano aprueba la spec 001: fusionar su PR y pasar a la misma forma `vigia-enfermeria` y `vigia-docencia` (tareas en `specs/001-forma-de-trabajo/tasks.md`).
-2. Datos desactualizados vistos de paso, sin tocar: `README.md` del núcleo dice instalar `@v0.4.4`, y el `CLAUDE.md` de vigia-docencia dice que consume `vigia-core@v0.4.4` (va por v0.8.3).
-3. Test que falla solo de madrugada en local: `test_dashboard.py::TestMetaJson::test_total_y_total_today` compara `date.today()` (hora local) con `first_seen_at` en UTC, así que entre las 00:00 y las 02:00 de Madrid da 0 en vez de 2. En Actions (UTC) no pasa y producción no se ve afectada. Visto el 1/10 a las 00:14; sin tocar.
+1. Responder ❓ D15 (días hacia atrás que mira el bot) con Laureano.
+2. Acciones de GitHub con Node 20 (D17), con Laureano delante.
+3. Pendientes de cada bot en su `RELEVO.md`.

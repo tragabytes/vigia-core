@@ -1,6 +1,6 @@
 # Tareas — 001 Forma de trabajo de temario-eir
 
-Noche del 30/09 al 1/10, autónomo (DECISIONES D5-D8). **PR en borrador, sin fusionar.**
+Noche del 30/09 al 1/10, autónomo (DECISIONES D5-D8). Núcleo fusionado el 14/10 (PR #28); bots el 14/10 (D19).
 
 ## Núcleo (vigia-core)
 - [x] Spec
@@ -19,9 +19,9 @@ Noche del 30/09 al 1/10, autónomo (DECISIONES D5-D8). **PR en borrador, sin fus
   - §3.6 contratos → regla 6
   - §3.7 publicar el núcleo → MANTENIMIENTO §5
   - Gotchas de entorno → regla 8 + MANTENIMIENTO §1
-- [ ] **Visto bueno de Laureano** y fusionar
+- [x] **Visto bueno de Laureano** («adelante con la fusión», 14/10) y fusionado (PR #28)
 
 ## Bots (después del visto bueno)
-- [ ] vigia-enfermeria: CLAUDE.md corto; revisar `BACKLOG.md` (812 líneas), `PLAN.md`, `PLAN_MAESTRO.md` e `incidents/`; lo vivo al relevo o a una spec
-- [ ] vigia-docencia: CLAUDE.md corto (y quitar el `v0.4.4` desfasado); revisar `ROADMAP.md`
-- [ ] Cambiar en los dos las referencias a «maestro §3.6-3.7» por `MANTENIMIENTO.md` §5-6
+- [x] vigia-enfermeria: CLAUDE.md corto; `BACKLOG.md`, `PLAN.md`, `PLAN_MAESTRO.md` e `incidents/` a `historico/`; lo vivo a `RELEVO.md` (PR #40)
+- [x] vigia-docencia: CLAUDE.md corto (sin el `v0.4.4` desfasado); `ROADMAP.md` a `historico/` y lo vivo a `RELEVO.md` (PR #24)
+- [x] Las referencias a «maestro §3.6-3.7» desaparecen con los CLAUDE.md nuevos
