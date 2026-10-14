@@ -220,6 +220,23 @@ class TestMetaJson:
         assert meta["total_items"] == 3
         assert meta["total_today"] == 2
 
+    def test_total_today_usa_la_fecha_del_run_no_la_del_reloj(self, tmp_path):
+        """Fallo que impide: `total_today` comparaba `first_seen_at` (UTC)
+        con `date.today()` (hora local). En local, entre las 00:00 y las
+        02:00 de Madrid daba 0 y `test_total_y_total_today` fallaba (visto
+        el 1/10/2026). Con un run de fecha fija falla siempre sin el arreglo."""
+        run = datetime(2020, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        storage = Storage(db_path=tmp_path / "seen.db")
+        _seed(storage, [
+            _item("a", first_seen_at=run),
+            _item("b", first_seen_at=run),
+        ])
+        dashboard.export_all(storage, tmp_path / "out", last_run_at=run)
+        storage.close()
+
+        meta = json.loads((tmp_path / "out" / "meta.json").read_text(encoding="utf-8"))
+        assert meta["total_today"] == 2
+
     def test_days_watching_es_delta_con_first_seen_minimo(self, tmp_path):
         now_utc = datetime(2026, 4, 25, 12, 0, 0, tzinfo=timezone.utc)
         storage = Storage(db_path=tmp_path / "seen.db")

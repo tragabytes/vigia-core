@@ -421,7 +421,7 @@ def _meta_payload(
         "SELECT COUNT(*) FROM items"
     ).fetchone()[0]
 
-    today_iso = date.today().isoformat()
+    today_iso = now.date().isoformat()  # UTC, como first_seen_at
     total_today = storage._conn.execute(
         "SELECT COUNT(*) FROM items WHERE substr(first_seen_at, 1, 10) = ?",
         (today_iso,),
