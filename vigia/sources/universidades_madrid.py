@@ -145,14 +145,17 @@ UNI_CONFIGS: list[UniConfig] = [
             # funcionario/laboral: la estructura real es `ul.main-ul > div`
             # (con `<a>` descendiente); `ul.main-ul article` matchea 0 hoy y
             # perdía convocatorias vivas (fallo silencioso, probe verde).
+            # Desde ~17/09/2026 sirve pestañas por año: `div.tab-content
+            # blockquote` (título en `<h3>`, `<a>` vacío). Se aceptan las dos
+            # estructuras por si la web vuelve atrás.
             # bolsa-de-empleo sí usa `<article>`, se deja tal cual.
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/funcionario/",
-                item_css="ul.main-ul > div",
+                item_css="ul.main-ul > div, div.tab-content blockquote",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/laboral/",
-                item_css="ul.main-ul > div",
+                item_css="ul.main-ul > div, div.tab-content blockquote",
             ),
             UniListing(
                 url="https://www.uah.es/es/empleo-publico/PAS/bolsa-de-empleo/",
@@ -326,6 +329,12 @@ class UniversidadesMadridSource(Source):
                 p_node = container.find("p")
                 if p_node is not None:
                     preferred_title = p_node.get_text(" ", strip=True)
+            # UAH (pestañas por año): el `<a>` del blockquote va vacío y el
+            # título está en el `<h3>`. La estructura antigua usa `<h4>`.
+            elif cfg.code == "UAH":
+                h3_node = container.find("h3")
+                if h3_node is not None:
+                    preferred_title = h3_node.get_text(" ", strip=True)
 
             title, item_url = _resolve_title_and_url(
                 container_text, anchor, listing.url, cfg.base_url,
