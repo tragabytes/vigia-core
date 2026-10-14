@@ -321,7 +321,9 @@ def _chat_ids() -> list[str]:
 
 def _send_chunk(text: str) -> None:
     url = TELEGRAM_API.format(token=TELEGRAM_BOT_TOKEN)
-    for chat_id in _chat_ids():
+    chat_ids = _chat_ids()
+    n_ok = 0
+    for chat_id in chat_ids:
         resp = requests.post(
             url,
             json={
@@ -340,3 +342,9 @@ def _send_chunk(text: str) -> None:
             )
             # No lanzamos la excepción para que un destinatario fallido
             # no impida la entrega al resto.
+        else:
+            n_ok += 1
+    # Sin esta línea, el log de Actions solo enseñaba los envíos fallidos.
+    logger.info(
+        "Telegram: mensaje enviado a %d/%d destinatarios", n_ok, len(chat_ids)
+    )
