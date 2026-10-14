@@ -1,6 +1,6 @@
 # Especificación: trabajar en vigia como en temario-eir
 
-**Carpeta**: `specs/001-forma-de-trabajo/` · **Fecha**: 2026-10-01 · **Estado**: borrador, hecho de noche, **sin fusionar**
+**Carpeta**: `specs/001-forma-de-trabajo/` · **Fecha**: 2026-10-01 · **Estado**: hecha (núcleo y bots, 14/10/2026)
 
 **Lo que se pidió** (Laureano, noche del 30/09 al 1/10): «Las instrucciones que tenías para trabajar son antiguas y ya no me gustan, no sé si puedes también copiarte la manera de trabajar que tengo en proyectos más recientes como "temario-eir". Me refiero a claude.md, las specs y esas cosas». Antes: «documenta las decisiones y sigue por tu cuenta».
 
