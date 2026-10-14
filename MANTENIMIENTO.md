@@ -8,7 +8,7 @@ Procedimientos paso a paso. Las reglas (el porqué) están en `CLAUDE.md`; aquí
 PYTHONIOENCODING=utf-8 python -m pytest tests -q --capture=no
 ```
 
-- Resultado esperado a v0.8.3: **547 passed, 2 skipped**.
+- Resultado esperado a v0.8.4: **552 passed, 2 skipped**.
 - Sin `PYTHONIOENCODING=utf-8`, en Windows falla `test_probe.py::test_exit_code_1_si_alguna_fuente_falla`: la consola cp1252 no sabe escribir el `→`. Lo mismo les pasa a `--probe` y `--dry-run`.
 - `--capture=no` hace falta en las consolas que rompen la captura de pytest.
 - Si faltan dependencias (`No module named 'requests'`), instala el núcleo en un entorno aparte: `python -m venv <dir>` y `<dir>/Scripts/python -m pip install -e .`.
