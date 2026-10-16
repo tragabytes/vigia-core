@@ -193,6 +193,19 @@ class TestCasosHistoricos:
 # Falsos positivos (NO deben ser detectados)
 # ---------------------------------------------------------------------------
 
+class TestVigilanciaDeLaSalud:
+    """Fallo que impide: las mutuas y los servicios de prevención llaman al
+    puesto "Enfermero/a Especialista en Vigilancia de la Salud" (caso real:
+    Applus, Madrid, 11/09/2026) y el extractor no lo reconocía. Aprobado por
+    Laureano el 16/10/2026."""
+
+    def test_enfermero_de_vigilancia_de_la_salud_hace_match(self):
+        assert extract(_raw("Enfermero/a Especialista en Vigilancia de la Salud")) is not None
+
+    def test_vigilancia_de_la_salud_sin_enfermeria_no_hace_match(self):
+        assert extract(_raw("Auxiliar Vigilancia de la Salud - Salamanca")) is None
+
+
 class TestFalsosPositivos:
     def test_tcae(self):
         """Técnico en Cuidados Auxiliares de Enfermería — no es Enfermería del Trabajo."""
