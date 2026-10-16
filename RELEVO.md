@@ -13,7 +13,7 @@ Lee, por este orden:
 4. `MANTENIMIENTO.md`, según lo que toque.
 
 **Estado (16/10).**
-- Núcleo en **v0.9.0**; los dos bots, pineados a v0.9.0. Desde esta versión el bot mira **3 días hacia atrás** (D22).
+- Núcleo en **v0.10.0**; los dos bots, pineados a v0.10.0. Desde v0.9.0 el bot mira **3 días hacia atrás** (D22); desde v0.10.0 lee el personal no docente de universidades en BOE/BOCM (D24) y tres empresas de ePreselec, solo Madrid (D25-D26).
 - El daily del 15/10 ya confirmó lo de v0.8.4/v0.8.5: UAH `ok`, Comunidad `0 errores`, `Telegram: mensaje enviado a 2/2`, issue de fuentes cerrado y la etiqueta del dashboard arreglada.
 - Los tres repos trabajan ya con la forma de temario-eir (spec 001 cerrada).
 
@@ -26,5 +26,5 @@ Lee, por este orden:
 
 **Por dónde seguir:**
 1. **v0.9.0**: en el primer daily, `since_date` debe ser hoy menos 3 (lunes: menos 5) y no deben llegar avisos de cosas ya vistas.
-2. Acciones de GitHub con Node 20 (D17), con Laureano delante.
+2. **v0.10.0**: `epreselec … 3 empresas` sin `bloqueado por el anti-robots`; si sale a diario, añadir una pausa entre empresas (D25).
 3. Pendientes de cada bot en su `RELEVO.md`.
