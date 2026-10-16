@@ -13,8 +13,10 @@ Spec: [`spec.md`](spec.md). Aprobada por Laureano el 16/10/2026, con el gasto de
 - [x] Banco de prueba de ~40 convocatorias reales con la respuesta correcta — 39 casos en `evals/enricher/casos.json`, etiquetados con sus criterios (pendiente que Laureano revise las etiquetas dudosas)
 - [x] Correr Sonnet 4.6, Sonnet 5.5 y Haiku 5.5 — tres rondas, ~3,4 $
 - [x] Tabla de resultados: [`resultados.md`](resultados.md)
-- [ ] **Laureano**: decidir modelo y casos en disputa
-- [ ] Si se cambia: migración (pensamiento, `fallbacks`, salidas estructuradas), simulación con copia de la base, nueva versión del núcleo
+- [x] **Laureano** (16/10): avisar de los actos de procesos de la especialidad y del «Spanish teacher» en colegios extranjeros; prueba acotada de Haiku 5.5
+- [x] Modelo por perfil, precarga de la página con modelos nuevos y modelo testigo — v0.16.0
+- [ ] Prueba en docencia: Haiku 5.5 con Sonnet 4.6 de testigo, 2 semanas (hasta el 30/10). **Se abandona** si el log muestra alguna convocatoria que Haiku dice NO y el testigo SÍ, y que de verdad era para el perfil
+- [ ] Si sale bien: quitar el testigo en docencia y decidir enfermería
 
 ## H3 · Agente de salud
 - [x] Sonnet 5 → Sonnet 5.5 — PR #54

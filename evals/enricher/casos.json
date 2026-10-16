@@ -21,7 +21,7 @@
   "categoria": "traslado",
   "raw_text": "",
   "relevante": true,
-  "nota": "Concurso de méritos Enfermería del Trabajo"
+  "nota": "Concurso de méritos Enfermería del Trabajo — acto de un proceso de la especialidad: Laureano quiere aviso (16/10)"
  },
  {
   "id": "83b7eb970d9a7640",
@@ -33,7 +33,7 @@
   "categoria": "oposicion",
   "raw_text": "",
   "relevante": true,
-  "nota": "Estabilización SERMAS Enfermería del Trabajo"
+  "nota": "Estabilización SERMAS Enfermería del Trabajo — acto de un proceso de la especialidad: Laureano quiere aviso (16/10)"
  },
  {
   "id": "95397d9420fd1298",
@@ -105,7 +105,7 @@
   "categoria": "oposicion",
   "raw_text": "",
   "relevante": true,
-  "nota": "BOCM relación complementaria de aprobados y plazas reofertadas"
+  "nota": "BOCM relación complementaria de aprobados y plazas reofertadas — acto de un proceso de la especialidad: Laureano quiere aviso (16/10)"
  },
  {
   "id": "961becb796a4c975",
@@ -417,7 +417,7 @@
   "categoria": "",
   "raw_text": "Oferta de profesor de español (Spanish teacher). Hulme Hall Grammar School. Stockport.",
   "relevante": true,
-  "nota": "TES, Reino Unido (sustitución)"
+  "nota": "TES, Reino Unido (sustitución) — Spanish como lengua extranjera en colegio extranjero = ELE (Laureano, 16/10)"
  },
  {
   "id": "tes-68822962",
@@ -428,8 +428,8 @@
   "fecha": "2026-10-16",
   "categoria": "",
   "raw_text": "Oferta de profesor de español (Spanish teacher). The British School of Barcelona, City (Main Campus). Barcelona, Spain.",
-  "relevante": true,
-  "nota": "TES, colegio británico en Barcelona"
+  "relevante": false,
+  "nota": "TES, colegio británico en Barcelona: Lengua A para nativos, no ELE y fuera de Madrid (reetiquetado 16/10)"
  },
  {
   "id": "colejobs-89838883",

@@ -13,6 +13,10 @@ on:
         description: "Descargar la página si el texto tiene menos de N caracteres (0 = como producción)"
         required: false
         default: "0"
+      docencia_ref:
+        description: "Rama de vigia-docencia de la que sale su perfil"
+        required: false
+        default: "main"
 
 permissions:
   contents: read
@@ -29,6 +33,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: tragabytes/vigia-docencia
+          ref: ${{ github.event.inputs.docencia_ref }}
           path: _docencia
 
       - name: Configurar Python
