@@ -37,6 +37,9 @@ jobs:
 
       - name: Agente de salud (triage + PR de fix)
         uses: anthropics/claude-code-action@v1
+        env:
+          # Para leer los logs de los dailies de los bots con `gh` (1b).
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -46,7 +49,7 @@ jobs:
           # --max-turns 80: con 40 el run del 17/08 arregló iac pero se quedó sin
           # turnos ANTES de abrir el PR (error_max_turns 41/40). El camino
           # completo investigar→fix→test→PR necesita más margen.
-          claude_args: '--max-turns 80 --model claude-sonnet-5 --allowedTools Read,Edit,Write,Glob,Grep,Bash,WebFetch'
+          claude_args: '--max-turns 80 --model claude-sonnet-5-5 --allowedTools Read,Edit,Write,Glob,Grep,Bash,WebFetch'
           prompt: |
             Eres el agente semanal de salud de las fuentes del proyecto "vigía".
             Estás en un checkout del repo NÚCLEO `tragabytes/vigia-core`. Lee su
@@ -60,6 +63,22 @@ jobs:
             - https://raw.githubusercontent.com/tragabytes/vigia-enfermeria/gh-pages/data/sources_status.json
             - https://raw.githubusercontent.com/tragabytes/vigia-docencia/gh-pages/data/sources_status.json
             Cada entrada tiene: name, status (ok|error|skipped), code, detail, url.
+            Si una fuente combina varios listados, el `detail` termina en
+            "listados vacíos: <url>": esa es la URL rota (puede no ser `url`).
+
+            ## 1b. Mira también el último daily de cada bot (regla 5: probe ≠ runtime)
+            Un probe en verde puede esconder pérdidas. Para cada bot:
+            `gh run list -R tragabytes/<bot> --workflow daily.yml -L 1 --json databaseId`
+            y `gh run view <id> -R tragabytes/<bot> --log | grep -E "errores|WARNING"`.
+            Cuenta como señal SOLO un error que apunte a selector/parser (no
+            timeouts sueltos) y que se repita.
+
+            ## 1c. Qué fuentes son tuyas
+            Solo las que existen en `vigia/sources/` de ESTE repo. Las fuentes
+            propias de docencia (`todoele`, `colejobs`, `colegios_es`,
+            `novedades_rrhh`, `tes`, `cervantes`, `bocm` de docencia,
+            `profesoresdeele`) viven en vigia-docencia y las revisa su propio
+            agente semanal: ignóralas aquí.
 
             ## 2. Clasifica las fuentes en `status == "error"`
             - ACCIONABLE (selector/parser roto o URL cambiada): el `detail`
