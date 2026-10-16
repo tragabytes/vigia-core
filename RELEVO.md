@@ -26,7 +26,7 @@ Lee, por este orden:
 5. El issue abierto en vigia-enfermeria («Fuentes con error en el probe») debería cerrarse cuando el probe salga limpio.
 
 **Por dónde seguir:**
-0. **Uso de la API de Anthropic** ([`specs/002-uso-api-anthropic/`](specs/002-uso-api-anthropic/tasks.md)): lunes 19/10, comprobar en el daily de los dos bots las líneas `Enricher uso:` (con `caché leída` > 0) y, en docencia, `Testigo:`. El 30/10 se decide la prueba de Haiku. Pendiente de Laureano: espacio de trabajo y clave propios con límite.
+0. **Uso de la API de Anthropic** ([`specs/002-uso-api-anthropic/`](specs/002-uso-api-anthropic/tasks.md)): lunes 19/10, comprobar en el daily de los dos bots las líneas `Enricher uso:` (con `caché leída` > 0) y, en docencia, `Testigo:`. El 30/10 se decide la prueba de Haiku.
 1. **v0.9.0**: en el primer daily, `since_date` debe ser hoy menos 3 (lunes: menos 5) y no deben llegar avisos de cosas ya vistas.
 2. **v0.10.0**: `epreselec … 3 empresas` sin `bloqueado por el anti-robots`; si sale a diario, añadir una pausa entre empresas (D25).
 3. Pendientes de cada bot en su `RELEVO.md`.
