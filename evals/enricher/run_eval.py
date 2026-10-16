@@ -33,6 +33,8 @@ def main() -> None:
     ap.add_argument("--casos", default=str(Path(__file__).with_name("casos.json")))
     ap.add_argument("--salida", default="resultados.jsonl")
     ap.add_argument("--simular", action="store_true", help="cliente falso: comprueba el montaje sin gastar")
+    ap.add_argument("--precargar", type=int, default=0,
+                    help="descarga la página si el texto tiene menos de N caracteres (0 = como producción)")
     args = ap.parse_args()
 
     if args.perfil == "docencia":
@@ -47,9 +49,10 @@ def main() -> None:
 
     # Cuerpo de cada convocatoria, una vez para todos los modelos.
     for c in casos:
-        if not c["raw_text"]:
+        if not c["raw_text"] or len(c["raw_text"]) < args.precargar:
             body = "" if args.simular else enricher._fetch_body_full(c["url"])
-            c["raw_text"] = "" if (not body or body.startswith("ERROR")) else body
+            if body and not body.startswith("ERROR"):
+                c["raw_text"] = body
         print(f"[cuerpo] {c['id']}: {len(c['raw_text'])} caracteres", flush=True)
 
     base = _cliente_falso() if args.simular else _cliente_real()

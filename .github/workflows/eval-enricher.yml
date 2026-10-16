@@ -9,6 +9,10 @@ on:
         description: "Modelos como id:esfuerzo:max_tokens separados por comas"
         required: false
         default: "claude-sonnet-4-6:-:2048,claude-sonnet-5-5:low:8000,claude-haiku-5-5:low:8000"
+      precargar:
+        description: "Descargar la página si el texto tiene menos de N caracteres (0 = como producción)"
+        required: false
+        default: "0"
 
 permissions:
   contents: read
@@ -40,9 +44,10 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PYTHONIOENCODING: utf-8
           MODELOS: ${{ github.event.inputs.modelos }}
+          PRECARGAR: ${{ github.event.inputs.precargar }}
         run: |
-          python evals/enricher/run_eval.py --perfil enfermeria --modelos "$MODELOS" --salida resultados.jsonl
-          PYTHONPATH=_docencia python evals/enricher/run_eval.py --perfil docencia --modelos "$MODELOS" --salida resultados.jsonl
+          python evals/enricher/run_eval.py --perfil enfermeria --modelos "$MODELOS" --precargar "$PRECARGAR" --salida resultados.jsonl
+          PYTHONPATH=_docencia python evals/enricher/run_eval.py --perfil docencia --modelos "$MODELOS" --precargar "$PRECARGAR" --salida resultados.jsonl
           python evals/enricher/resumen.py resultados.jsonl > resumen.md
           cat resumen.md >> "$GITHUB_STEP_SUMMARY"
           cat resumen.md
