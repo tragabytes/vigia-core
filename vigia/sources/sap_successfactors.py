@@ -46,7 +46,8 @@ from typing import Optional
 
 import requests
 
-from vigia.config import FAST_KEYWORDS, normalize
+from vigia import config
+from vigia.config import normalize
 from vigia.profile import get_active_profile
 from vigia.sources.base import RawItem, Source
 
@@ -215,8 +216,11 @@ class SapSuccessfactorsSource(Source):
 # ---------------------------------------------------------------------------
 
 def _matches_fast_keywords(text: str) -> bool:
+    # Se leen del perfil activo al usarlas, no al importar el módulo: un
+    # perfil que importa `SapEmpresa` carga este módulo antes de fijarse
+    # (vigia-docencia), y se quedaba con las palabras del perfil por defecto.
     norm = normalize(text)
-    return any(kw in norm for kw in FAST_KEYWORDS)
+    return any(kw in norm for kw in config.FAST_KEYWORDS)
 
 
 def _resolve_url(href: str, base_url: str) -> str:
