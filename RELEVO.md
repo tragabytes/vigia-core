@@ -13,7 +13,8 @@ Lee, por este orden:
 4. `MANTENIMIENTO.md`, según lo que toque.
 
 **Estado (16/10, noche).**
-- Núcleo en **v0.14.0**. Docencia pineada a v0.14.0; enfermería a v0.11.1 (D35). Ventana de 3 días desde v0.9.0 (D22).
+- Núcleo en **v0.16.0**, con los dos bots pineados a esa versión. Ventana de 3 días desde v0.9.0 (D22).
+- Uso de la API (spec 002): el gasto queda en el log de cada run (`Enricher uso:`) y se reintentan las convocatorias que se quedaron sin resumir (v0.15.0). **Docencia prueba Haiku 5.5 hasta el 30/10** con Sonnet 4.6 de testigo (D36-D38): cada lunes hay que buscar `Testigo:` en el log del daily.
 - Docencia lee 10 fuentes nuevas desde el 16/10 (spec 001 de docencia, D28-D33). Su relevo dice qué comprobar el lunes 19/10.
 - Los tres repos trabajan con la forma de temario-eir.
 
@@ -25,7 +26,7 @@ Lee, por este orden:
 5. El issue abierto en vigia-enfermeria («Fuentes con error en el probe») debería cerrarse cuando el probe salga limpio.
 
 **Por dónde seguir:**
-0. **Uso de la API de Anthropic**: propuesta en [`specs/002-uso-api-anthropic/`](specs/002-uso-api-anthropic/spec.md), pendiente del visto bueno de Laureano.
+0. **Uso de la API de Anthropic** ([`specs/002-uso-api-anthropic/`](specs/002-uso-api-anthropic/tasks.md)): lunes 19/10, comprobar en el daily de los dos bots las líneas `Enricher uso:` (con `caché leída` > 0) y, en docencia, `Testigo:`. El 30/10 se decide la prueba de Haiku. Pendiente de Laureano: espacio de trabajo y clave propios con límite.
 1. **v0.9.0**: en el primer daily, `since_date` debe ser hoy menos 3 (lunes: menos 5) y no deben llegar avisos de cosas ya vistas.
 2. **v0.10.0**: `epreselec … 3 empresas` sin `bloqueado por el anti-robots`; si sale a diario, añadir una pausa entre empresas (D25).
 3. Pendientes de cada bot en su `RELEVO.md`.
