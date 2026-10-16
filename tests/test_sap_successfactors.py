@@ -379,3 +379,40 @@ def test_palabras_rapidas_del_perfil_activo_no_las_de_la_importacion():
         assert not sap_successfactors._matches_fast_keywords("Enfermero del trabajo")
     finally:
         profile_mod.set_active_profile(None)
+
+
+class TestBusquedaYPalabrasPorEmpresa:
+    """Para Inspired (vigia-docencia, 16/10/2026): su portal SuccessFactors se
+    acota con `?locationsearch=Madrid` y sus títulos van en inglés («Spanish
+    Teacher»), que las palabras del perfil docente no dejan pasar."""
+
+    INSPIRED = SapEmpresa(
+        "INSPIRED", "Inspired",
+        "https://jobs.inspirededu.com/search/?locationsearch=Madrid",
+        palabras=("spanish", "historia"),
+    )
+
+    def test_url_con_busqueda_pagina_con_ampersand(self):
+        vacia = MagicMock(text="<html></html>", status_code=200)
+        vacia.raise_for_status = lambda: None
+        with _con_empresas([self.INSPIRED]), patch.object(
+            sap_successfactors.requests, "get", return_value=vacia,
+        ) as get:
+            SapSuccessfactorsSource().fetch(since_date=date(2026, 1, 1))
+        assert get.call_args_list[0].args[0] == (
+            "https://jobs.inspirededu.com/search/?locationsearch=Madrid&startrow=0&num=10")
+
+    def test_palabras_de_la_empresa_mandan_sobre_las_del_perfil(self):
+        html = """<div class="job"><a class="jobTitle-link" href="/job/Madrid-Spanish-Teacher/1/">Spanish Teacher</a></div>
+                  <div class="job"><a class="jobTitle-link" href="/job/Madrid-Enfermero/2/">Enfermero del trabajo</a></div>"""
+        llena = MagicMock(text=html, status_code=200)
+        llena.raise_for_status = lambda: None
+        vacia = MagicMock(text="<html></html>", status_code=200)
+        vacia.raise_for_status = lambda: None
+        with _con_empresas([self.INSPIRED]), patch.object(
+            sap_successfactors.requests, "get",
+            side_effect=lambda url, **kw: llena if "startrow=0" in url else vacia,
+        ):
+            items = SapSuccessfactorsSource().fetch(since_date=date(2026, 1, 1))
+        assert [i.title for i in items] == ["Spanish Teacher"]
+        assert items[0].url == "https://jobs.inspirededu.com/job/Madrid-Spanish-Teacher/1/"
