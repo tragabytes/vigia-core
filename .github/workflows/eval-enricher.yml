@@ -1,0 +1,57 @@
+name: eval-enricher
+
+# Banco de prueba del enricher (spec 002, H2). Solo a mano: cada ejecución
+# GASTA en la API (~4 $ con los tres modelos y los 39 casos).
+on:
+  workflow_dispatch:
+    inputs:
+      modelos:
+        description: "Modelos como id:esfuerzo:max_tokens separados por comas"
+        required: false
+        default: "claude-sonnet-4-6:-:2048,claude-sonnet-5-5:low:8000,claude-haiku-5-5:low:8000"
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Descargar vigia-core
+        uses: actions/checkout@v5
+
+      - name: Descargar vigia-docencia (para su perfil)
+        uses: actions/checkout@v5
+        with:
+          repository: tragabytes/vigia-docencia
+          path: _docencia
+
+      - name: Configurar Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Instalar
+        run: pip install -e .
+
+      - name: Banco de prueba
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PYTHONIOENCODING: utf-8
+          MODELOS: ${{ github.event.inputs.modelos }}
+        run: |
+          python evals/enricher/run_eval.py --perfil enfermeria --modelos "$MODELOS" --salida resultados.jsonl
+          PYTHONPATH=_docencia python evals/enricher/run_eval.py --perfil docencia --modelos "$MODELOS" --salida resultados.jsonl
+          python evals/enricher/resumen.py resultados.jsonl > resumen.md
+          cat resumen.md >> "$GITHUB_STEP_SUMMARY"
+          cat resumen.md
+
+      - name: Guardar resultados
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-enricher
+          path: |
+            resultados.jsonl
+            resumen.md
