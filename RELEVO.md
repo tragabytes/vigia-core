@@ -25,7 +25,7 @@ Lee, por este orden:
 5. El issue abierto en vigia-enfermeria («Fuentes con error en el probe») debería cerrarse cuando el probe salga limpio.
 
 **Por dónde seguir:**
-0. **Pedido por Laureano (16/10):** revisar el uso de la API de Anthropic (modelo del enricher, coste, orquestación) frente a lo disponible hoy.
+0. **Uso de la API de Anthropic**: propuesta en [`specs/002-uso-api-anthropic/`](specs/002-uso-api-anthropic/spec.md), pendiente del visto bueno de Laureano.
 1. **v0.9.0**: en el primer daily, `since_date` debe ser hoy menos 3 (lunes: menos 5) y no deben llegar avisos de cosas ya vistas.
 2. **v0.10.0**: `epreselec … 3 empresas` sin `bloqueado por el anti-robots`; si sale a diario, añadir una pausa entre empresas (D25).
 3. Pendientes de cada bot en su `RELEVO.md`.
