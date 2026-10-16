@@ -24,6 +24,7 @@ from vigia.sources.iac import IACSource
 from vigia.sources.las_rozas import LasRozasSource
 from vigia.sources.metro_madrid import MetroMadridSource
 from vigia.sources.sap_successfactors import SapSuccessfactorsSource
+from vigia.sources.workday import WorkdaySource
 from vigia.sources.universidades_madrid import UniversidadesMadridSource
 
 # Fuentes genéricas: boletines oficiales, portales de organismos y agregadores
@@ -41,6 +42,7 @@ CORE_SOURCES = {
     "ciemat": CIEMATSource,
     "universidades_madrid": UniversidadesMadridSource,
     "sap_successfactors": SapSuccessfactorsSource,
+    "workday": WorkdaySource,
     "epreselec": EpreselecSource,
     "las_rozas": LasRozasSource,
     "aena": AENASource,
