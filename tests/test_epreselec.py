@@ -181,3 +181,55 @@ class TestParseFecha:
     def test_texto_sin_fecha(self):
         assert _parse_es_date("próximamente") is None
         assert _parse_es_date("") is None
+
+
+# ---------------------------------------------------------------------------
+# Filtro de provincia (perfil: source_params["epreselec"]["provincias"])
+# ---------------------------------------------------------------------------
+
+_HTML_PROVINCIAS = """
+<html><body><ul>
+  <li><a data_idoferta="1"><span class="op-titulo">Enfermero/a del Trabajo Mutua BARAJAS</span>
+      <span class="op-provincia">Madrid, España</span><span class="op-fecha">2 de octubre, 2026</span></a></li>
+  <li><a data_idoferta="2"><span class="op-titulo">Enfermero/a del Trabajo Mutua PAMPLONA</span>
+      <span class="op-provincia">Navarra, España</span><span class="op-fecha">2 de octubre, 2026</span></a></li>
+  <li><a data_idoferta="3"><span class="op-titulo">Enfermero/a Especialista en Enfermería del Trabajo - Madrid</span>
+      <span class="op-provincia"></span><span class="op-fecha">2 de octubre, 2026</span></a></li>
+  <li><a data_idoferta="4"><span class="op-titulo">Enfermero/a Especialista enfermería del trabajo - Barcelona</span>
+      <span class="op-provincia"></span><span class="op-fecha">2 de octubre, 2026</span></a></li>
+</ul></body></html>
+"""
+
+
+@contextmanager
+def _con_tenants_y_provincias(empresas, provincias):
+    profile_mod.set_active_profile(dataclasses.replace(
+        DEFAULT,
+        source_params={"epreselec": {"empresas": empresas, "provincias": provincias}},
+    ))
+    try:
+        yield
+    finally:
+        profile_mod.set_active_profile(None)
+
+
+class TestFiltroProvincia:
+    """Decisión de Laureano (16/10/2026): las ofertas privadas de mutuas y
+    servicios de prevención solo interesan en Madrid. SPMAS deja vacía la
+    provincia y pone la ciudad en el título; Fraternidad y Applus la rellenan."""
+
+    def _titulos(self, provincias):
+        source = EpreselecSource()
+        with _con_tenants_y_provincias([_TENANT], provincias), patch.object(
+            epreselec.requests, "get", return_value=_resp(_HTML_PROVINCIAS),
+        ):
+            return [it.title for it in source.fetch(since_date=date(2000, 1, 1))]
+
+    def test_solo_madrid_por_provincia_o_por_titulo(self):
+        assert self._titulos(["madrid"]) == [
+            "Enfermero/a del Trabajo Mutua BARAJAS",
+            "Enfermero/a Especialista en Enfermería del Trabajo - Madrid",
+        ]
+
+    def test_sin_provincias_en_el_perfil_no_filtra(self):
+        assert len(self._titulos([])) == 4

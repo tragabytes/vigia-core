@@ -78,6 +78,9 @@ _WEAK_CONTEXT_PATTERNS = [
     (r"salud laboral", r"enfermer"),
     (r"servicio de prevencion", r"enfermer"),
     (r"prevencion de riesgos laborales", r"enfermer"),
+    # Denominación habitual en mutuas y servicios de prevención (caso real:
+    # Applus, "Enfermero/a Especialista en Vigilancia de la Salud", 2026-09).
+    (r"vigilancia de la salud", r"enfermer"),
     # ATS/DUE histórico: si aparece junto a contexto de PRL/salud laboral,
     # es match. El patrón "ats due" ya implica enfermería (DUE = Diplomado
     # Universitario en Enfermería), por eso aquí el confirmador es el
@@ -494,7 +497,21 @@ DEFAULT = Profile(
                     "Fraternidad-Muprespa",
                     "https://fraternidad.epreselec.com",
                 ),
+                # Añadidas el 2026-10-16 (confirmadas vivas, misma estructura).
+                EpreselecEmpresa(
+                    "SPMAS",
+                    "SPMAS Servicio de Prevención",
+                    "https://spmas.epreselec.com",
+                ),
+                EpreselecEmpresa(
+                    "APPLUS",
+                    "Applus+",
+                    "https://applus.epreselec.com",
+                ),
             ],
+            # Ofertas privadas: solo Madrid (Laureano, 2026-10-16). Las
+            # públicas (BOE, BOCM…) no se filtran por provincia.
+            "provincias": ["madrid"],
         },
     },
 )

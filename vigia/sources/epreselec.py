@@ -88,6 +88,13 @@ def _epreselec_empresas() -> list[EpreselecEmpresa]:
     return list(params.get("empresas", []))
 
 
+def _epreselec_provincias() -> list[str]:
+    """Provincias aceptadas (normalizadas), del perfil activo. Vacío = todas."""
+    from vigia.config import normalize
+    params = get_active_profile().source_params.get("epreselec", {})
+    return [normalize(p) for p in params.get("provincias", [])]
+
+
 class EpreselecSource(Source):
     name = "epreselec"
     probe_url = "https://fraternidad.epreselec.com/Ofertas/Ofertas.aspx"
@@ -157,6 +164,15 @@ class EpreselecSource(Source):
 
         prov_el = anchor.select_one(".op-provincia")
         provincia = prov_el.get_text(" ", strip=True) if prov_el else ""
+        # Filtro opcional del perfil (`source_params["epreselec"]["provincias"]`).
+        # Con la provincia vacía (SPMAS pone la ciudad en el título), se mira
+        # el título.
+        provincias = _epreselec_provincias()
+        if provincias:
+            from vigia.config import normalize
+            donde = normalize(provincia or title)
+            if not any(p in donde for p in provincias):
+                return None
 
         seen_urls.add(item_url)
         return RawItem(
