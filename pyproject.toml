@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vigia-core"
-version = "0.11.1"
+version = "0.12.0"
 description = "Núcleo reutilizable de vigilancia de empleo (pipeline fetch→extract→enrich→notify) para bots de Telegram por perfil profesional."
 requires-python = ">=3.9"
 dependencies = [
