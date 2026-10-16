@@ -43,6 +43,10 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          # El informe final del agente va a la página del run (la variable
+          # GITHUB_STEP_SUMMARY no llega a sus comandos). Entrada de confianza:
+          # nuestro prompt, nuestros JSON de estado y nuestros logs.
+          display_report: "true"
           # Sin --allowedTools el agente corre maniatado: el primer run tuvo 5
           # permission denials y no pudo ni descargar los JSON de salud ni
           # ejecutar los tests. Bash cubre curl/python/pytest/git/gh.
@@ -114,11 +118,12 @@ jobs:
 
 
             ## Al terminar (siempre, haya o no PR)
-            Escribe un resumen corto en español en la página del run:
-            `cat >> "$GITHUB_STEP_SUMMARY" <<'FIN'` … `FIN`, con: fuentes en
-            error en el probe y por qué las das por accionables o pasajeras,
-            qué viste en el log del último daily, y qué hiciste (PR abierto o
-            "sin roturas de parser esta semana").
+            Tu ÚLTIMO mensaje es el informe que se publica en la página del run:
+            corto y en español, con las fuentes en error en el probe y por qué
+            las das por accionables o pasajeras, qué viste en el log del último
+            daily, y qué hiciste (PR abierto o "sin roturas de parser esta
+            semana").
+
             ## 4. Reglas duras
             - NUNCA mergees ni hagas push a `main`. Solo ramas + PRs.
             - Un PR por fuente. Si dudas si es transitorio, NO abras PR: prefiere
