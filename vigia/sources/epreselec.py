@@ -117,6 +117,13 @@ class EpreselecSource(Source):
             self.last_errors.append(f"{emp.code}: {exc}")
             return []
 
+        # El anti-robots de ePreselec responde 200 con esta página: sin esto
+        # se leía como "0 ofertas" y el bloqueo pasaba en silencio.
+        if "Pardon Our Interruption" in resp.text:
+            logger.warning("%s ofertas: bloqueado por el anti-robots", emp.code)
+            self.last_errors.append(f"{emp.code}: bloqueado por el anti-robots")
+            return []
+
         soup = BeautifulSoup(resp.text, "lxml")
         items: list[RawItem] = []
         seen_urls: set[str] = set()

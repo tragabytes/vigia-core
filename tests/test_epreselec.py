@@ -148,6 +148,24 @@ class TestEpreselecSource:
         assert items == []
         assert source.last_errors and "connection reset" in source.last_errors[0]
 
+    def test_pagina_de_bloqueo_antirobots_cuenta_como_error(self):
+        """Fallo que impide: ePreselec bloquea con una página "Pardon Our
+        Interruption" y código 200 (visto el 16/10/2026). La fuente la leía
+        como un listado sin ofertas: 0 items, 0 errores, sin aviso."""
+        bloqueo = (
+            "<html><head><title>Pardon Our Interruption</title></head>"
+            "<body>As you were browsing something about your browser made us "
+            "think you were a bot.</body></html>"
+        )
+        source = EpreselecSource()
+        with _con_tenants([_TENANT]), patch.object(
+            epreselec.requests, "get", return_value=_resp(bloqueo),
+        ):
+            items = source.fetch(since_date=date(2000, 1, 1))
+
+        assert items == []
+        assert source.last_errors and "anti-robots" in source.last_errors[0]
+
     def test_probe_url_es_listado(self):
         assert EpreselecSource.probe_url == \
             "https://fraternidad.epreselec.com/Ofertas/Ofertas.aspx"
