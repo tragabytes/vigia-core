@@ -45,12 +45,17 @@ SOURCE_REGISTRY = {**CORE_SOURCES, **get_active_profile().extra_sources}
 
 
 def _default_since() -> date:
-    """Devuelve la fecha de inicio por defecto: ayer en días laborables,
-    o el viernes anterior si hoy es lunes."""
+    """Devuelve la fecha de inicio por defecto: hace 3 días en días
+    laborables, o el miércoles anterior si hoy es lunes.
+
+    2 días de margen sobre "el último run" (antes: ayer / el viernes): lo
+    publicado un día en que una fuente falla se recupera en los dos runs
+    siguientes en vez de perderse. La dedup por `id_hash` evita repetir avisos
+    (DECISIONES D15)."""
     today = date.today()
-    if today.weekday() == 0:  # lunes → cubre el viernes anterior
-        return today - timedelta(days=3)
-    return today - timedelta(days=1)
+    if today.weekday() == 0:  # lunes → cubre desde el miércoles anterior
+        return today - timedelta(days=5)
+    return today - timedelta(days=3)
 
 
 def _collect_probe_results(enabled_classes: list) -> list[dict]:
