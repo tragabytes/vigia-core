@@ -365,3 +365,17 @@ class TestEmpresasPorPerfil:
             with patch.object(s, "_probe_count_selector", side_effect=contar):
                 assert s.probe_content_count() == 0
             assert s.probe_empty_listings == ["https://empleo.colegiosrc.es/search/"]
+
+
+def test_palabras_rapidas_del_perfil_activo_no_las_de_la_importacion():
+    """Fallo que impide (16/10/2026): vigia-docencia importa `SapEmpresa` en
+    su perfil, lo que carga este módulo ANTES de fijar el perfil docente. El
+    módulo se quedaba con las FAST_KEYWORDS de enfermería y descartaba en
+    silencio todas las ofertas de Colegios RC (0 items, 0 errores)."""
+    otro = dataclasses.replace(DEFAULT, fast_keywords=("profesor",))
+    profile_mod.set_active_profile(otro)
+    try:
+        assert sap_successfactors._matches_fast_keywords("Profesor de Historia")
+        assert not sap_successfactors._matches_fast_keywords("Enfermero del trabajo")
+    finally:
+        profile_mod.set_active_profile(None)
