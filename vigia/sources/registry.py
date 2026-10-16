@@ -24,6 +24,7 @@ from vigia.sources.iac import IACSource
 from vigia.sources.las_rozas import LasRozasSource
 from vigia.sources.metro_madrid import MetroMadridSource
 from vigia.sources.sap_successfactors import SapSuccessfactorsSource
+from vigia.sources.teamtailor import TeamtailorSource
 from vigia.sources.workday import WorkdaySource
 from vigia.sources.universidades_madrid import UniversidadesMadridSource
 
@@ -43,6 +44,7 @@ CORE_SOURCES = {
     "universidades_madrid": UniversidadesMadridSource,
     "sap_successfactors": SapSuccessfactorsSource,
     "workday": WorkdaySource,
+    "teamtailor": TeamtailorSource,
     "epreselec": EpreselecSource,
     "las_rozas": LasRozasSource,
     "aena": AENASource,
