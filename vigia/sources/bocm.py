@@ -23,6 +23,7 @@ from xml.etree import ElementTree as ET
 import requests
 
 from vigia.config import FAST_KEYWORDS, normalize
+from vigia.sources.boe import UNIV_STAFF_TITLE_KEYWORDS
 from vigia.sources._pdf import download_and_extract_pdf
 from vigia.sources.base import RawItem, Source
 
@@ -250,6 +251,12 @@ class BOCMSource(Source):
             if not has_fast_kw and url_pdf:
                 org_norm = normalize(org_name)
                 is_health = any(kw in org_norm for kw in HEALTH_ORGS)
+                # Universidades: solo personal no docente (mismo hueco y
+                # mismas palabras que en el BOE).
+                if not is_health and "universidad" in org_norm:
+                    is_health = any(
+                        kw in titulo_norm for kw in UNIV_STAFF_TITLE_KEYWORDS
+                    )
                 has_trigger = any(kw in titulo_norm for kw in PDF_TRIGGER_WORDS)
                 if is_health and has_trigger:
                     try:
