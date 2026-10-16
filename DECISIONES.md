@@ -61,3 +61,18 @@ Lo que Claude decide mientras Laureano no está, para que lo revise. Cada entrad
 | D26 | **ePreselec: SPMAS y Applus, solo ofertas de Madrid; y «vigilancia de la salud» + enfermería como señal válida** (PR #42). Tus respuestas del 16/10 | SPMAS tenía «Enfermería del Trabajo – Madrid» (2/10) y Applus «Enfermero/a Especialista en Vigilancia de la Salud», Madrid (11/09). Ninguna de las dos se avisará porque son anteriores a la ventana de 3 días | Quitar las empresas, `provincias` o el patrón en `vigia/_default_profile.py` |
 | D27 | **v0.10.0** con D24-D26 y bots actualizados. Docencia fija `univ_staff_title_keywords` vacío para no abrir convocatorias de universidades: su perfil las excluye | Sube «minor» porque amplía la cobertura | Volver los `requirements.txt` a `@v0.9.0` |
 
+## 16/10, tarde: fuentes nuevas de docencia (spec 001 de vigia-docencia)
+
+Lo decidido por Laureano está en la spec de docencia (alcance, InfoJobs pendiente, límite de gasto). Aquí, lo que decidí yo al construir:
+
+| # | Decisión | Motivo | Cómo se deshace |
+|---|---|---|---|
+| D28 ❓ | **Jooble y LinkedIn, fuera.** Lo recomendé y respondiste «adelante con todo»; lo interpreto como sí a la recomendación | Jooble aporta poco con CEU e ISP ya leídos y está detrás de Cloudflare; LinkedIn prohíbe leerlo así y bloquea servidores. Son la única vía para las academias ELE pequeñas de Madrid: ese hueco queda abierto | Si los quieres, se prueban en una rama con criterio de abandono escrito |
+| D29 | **«Parte de las clases en inglés» vale; «enteramente en inglés» no** | Tu respuesta fue sobre colegios con parte en inglés; el perfil siempre excluyó los puestos solo en inglés. Ninguna regla los tira: no pasan porque sus títulos no dicen «Historia» ni «Spanish», y el enricher decide | Si también valen, se cambia una línea del prompt del enricher de docencia |
+| D30 | **Las fuentes de colegios filtran materias del perfil en la propia fuente** (Colejobs, Workday, SuccessFactors, Teamtailor) | La simulación con la web real coló conserjes y profesores de Religión, Lengua o Alemán por el patrón «profesor de secundaria» (pensado para el BOE). Cada uno habría costado una llamada al enricher | Quitar `palabras` / `_MATERIA_RE` de la fuente |
+| D31 | **Arreglo en el núcleo: SuccessFactors lee las palabras rápidas al usarlas** (v0.11.1) y regla 7 del CLAUDE.md ampliada | Al importar `SapEmpresa` desde el perfil docente, el lector se quedaba con las palabras de enfermería: 0 ofertas, 0 errores | Revertir #46 |
+| D32 | **Lectores genéricos de Workday (v0.12.0) y Teamtailor (v0.14.0) en el núcleo**; búsqueda en la URL y palabras por empresa en SuccessFactors (v0.13.0) | Regla 2 de docencia: lo que sirve a varios perfiles va al núcleo. Enfermería no los activa | Revertir #47, #48, #49 |
+| D33 | **Límites aceptados**: Inspired solo para sus colegios de Madrid (su búsqueda por palabra no filtra); TES solo las 20 más recientes (ignora la paginación por URL); Cervantes sin las convocatorias internas (restringidas, traslados) | Son límites de las webs; están anotados en cada fuente y en el relevo de docencia | — |
+| D34 | **Quitado `t.html` del núcleo** (#45): una página que un agente de investigación descargó en la raíz y se coló en el commit de v0.11.0 | No es código ni entra en el paquete | — |
+| D35 | **Bots**: docencia en **v0.14.0**, enfermería en **v0.11.1** (no usa Workday ni Teamtailor; v0.12-v0.14 no le cambian nada) | Subir enfermería a v0.14.0 no aporta nada y sería otro run de CI de 10 min | Subirlo cuando haga falta |
+

@@ -12,10 +12,10 @@ Lee, por este orden:
 3. El `RELEVO.md` del bot que toque (`vigia-enfermeria`, `vigia-docencia`): ahí están sus pendientes.
 4. `MANTENIMIENTO.md`, según lo que toque.
 
-**Estado (16/10).**
-- Núcleo en **v0.10.0**; los dos bots, pineados a v0.10.0. Desde v0.9.0 el bot mira **3 días hacia atrás** (D22); desde v0.10.0 lee el personal no docente de universidades en BOE/BOCM (D24) y tres empresas de ePreselec, solo Madrid (D25-D26).
-- El daily del 15/10 ya confirmó lo de v0.8.4/v0.8.5: UAH `ok`, Comunidad `0 errores`, `Telegram: mensaje enviado a 2/2`, issue de fuentes cerrado y la etiqueta del dashboard arreglada.
-- Los tres repos trabajan ya con la forma de temario-eir (spec 001 cerrada).
+**Estado (16/10, noche).**
+- Núcleo en **v0.14.0**. Docencia pineada a v0.14.0; enfermería a v0.11.1 (D35). Ventana de 3 días desde v0.9.0 (D22).
+- Docencia lee 10 fuentes nuevas desde el 16/10 (spec 001 de docencia, D28-D33). Su relevo dice qué comprobar el lunes 19/10.
+- Los tres repos trabajan con la forma de temario-eir.
 
 **Por comprobar** (los puntos 1-5 ya salieron bien el 15/10; se dejan como lista de qué mirar si algo vuelve a fallar) (cómo: `MANTENIMIENTO.md` §3):
 1. **UAH (v0.8.4)**: el probe de `universidades_madrid` debe salir `ok` en vigia-enfermeria. Si sale `error`, el aviso ya dirá qué listado está vacío.
@@ -25,6 +25,7 @@ Lee, por este orden:
 5. El issue abierto en vigia-enfermeria («Fuentes con error en el probe») debería cerrarse cuando el probe salga limpio.
 
 **Por dónde seguir:**
+0. **Pedido por Laureano (16/10):** revisar el uso de la API de Anthropic (modelo del enricher, coste, orquestación) frente a lo disponible hoy.
 1. **v0.9.0**: en el primer daily, `since_date` debe ser hoy menos 3 (lunes: menos 5) y no deben llegar avisos de cosas ya vistas.
 2. **v0.10.0**: `epreselec … 3 empresas` sin `bloqueado por el anti-robots`; si sale a diario, añadir una pausa entre empresas (D25).
 3. Pendientes de cada bot en su `RELEVO.md`.
