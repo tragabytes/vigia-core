@@ -191,3 +191,23 @@ class TestMakeDiffText:
         diff = _make_diff_text("hola mundo", "hola mundo nuevo")
         assert "[diff truncado]" not in diff
         assert "-hola mundo" in diff or "+hola mundo nuevo" in diff
+
+
+def test_registra_los_tokens_de_cada_llamada(monkeypatch, caplog):
+    """Spec 002: el resumidor deja en el log lo que gasta cada llamada."""
+    import logging
+    from types import SimpleNamespace
+    from vigia import diff_summarizer
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    fake = MagicMock()
+    fake.messages.create.return_value = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text='{"sustantivo": true, "resumen": "Nueva lista"}')],
+        usage=SimpleNamespace(input_tokens=700, output_tokens=20,
+                              cache_creation_input_tokens=0, cache_read_input_tokens=0),
+    )
+    import anthropic
+    monkeypatch.setattr(anthropic, "Anthropic", lambda: fake)
+    with caplog.at_level(logging.INFO, logger="vigia.diff_summarizer"):
+        diff_summarizer.summarize_diff("lista provisional\nA", "lista definitiva\nB")
+    assert "diff_summarizer uso: entrada 700, salida 20" in caplog.text

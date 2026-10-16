@@ -1,11 +1,11 @@
 # Tareas — 002 Uso de la API de Anthropic
 
-Spec: [`spec.md`](spec.md). **Pendiente del visto bueno de Laureano.**
+Spec: [`spec.md`](spec.md). Aprobada por Laureano el 16/10/2026, con el gasto de la comparación.
 
 ## H1 · Medir y no quedarse sin servicio
-- [ ] Registrar en el log los tokens de cada llamada (enricher y resumidor) y el total del run
-- [ ] Caché de prompts en el enricher (comprobar `cache_read_input_tokens` > 0 en el log)
-- [ ] Reintentar en el siguiente run las convocatorias sin resumir (incluidas las 16 de septiembre)
+- [x] Registrar en el log los tokens de cada llamada (enricher y resumidor) y el total del run — v0.15.0
+- [x] Caché de prompts en el enricher (comprobar `cache_read_input_tokens` > 0 en el log) — v0.15.0
+- [x] Reintentar en el siguiente run las convocatorias sin resumir (incluidas las 16 de septiembre) — v0.15.0
 - [ ] **Laureano**: espacio de trabajo y clave propios para vigia, con límite y aviso por email
 - [ ] **Parar y validar**: gasto real de una semana
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime, timedelta, timezone
@@ -349,6 +350,18 @@ def main() -> None:
             storage.update_enrichment(item)
         else:
             storage.update_summary(item)
+
+    # Reintento (spec 002): convocatorias que nunca se resumieron porque la API
+    # falló otro día (límite de gasto agotado del 22 al 29/09/2026). Sin las de
+    # este run (se acaban de intentar) y con tope, para no disparar el gasto.
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        try:
+            enricher.enrich_pending(
+                storage, solo_sin_resumir=True,
+                excluir={i.id_hash for i in new_items}, limite=20,
+            )
+        except Exception as exc:
+            logger.warning("Reintento del enricher falló: %s", exc)
 
     # --- Fase 3.6: Export del dashboard ---
     # Se vuelca la BD a JSON antes de notificar. Sin probe_results: el step

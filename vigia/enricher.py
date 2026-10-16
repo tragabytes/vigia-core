@@ -148,10 +148,11 @@ def enrich(items: list[Item]) -> list[Item]:
     client = _anthropic.Anthropic()
     enriched = 0
     failed = 0
+    uso = _uso_vacio()
 
     for item in items:
         try:
-            data = _enrich_one(client, item)
+            data = _enrich_one(client, item, uso)
             _apply_enrichment(item, data)
             enriched += 1
         except Exception as exc:
@@ -165,10 +166,16 @@ def enrich(items: list[Item]) -> list[Item]:
         "Enricher v2: %d/%d items enriquecidos (%d fallidos)",
         enriched, len(items), failed,
     )
+    _log_uso("Enricher", uso)
     return items
 
 
-def enrich_pending(storage: Storage) -> int:
+def enrich_pending(
+    storage: Storage,
+    solo_sin_resumir: bool = False,
+    excluir: Optional[set] = None,
+    limite: Optional[int] = None,
+) -> int:
     """Enriquece los items de BD que aún no estén en `ENRICHMENT_VERSION`.
 
     Idempotente — recorre todos los items con `enriched_version IS NULL`
@@ -190,6 +197,16 @@ def enrich_pending(storage: Storage) -> int:
     sube `ENRICHMENT_VERSION` o se incorporan los nuevos campos.
     """
     pending = storage.iter_items_for_enrichment()
+    # Reintento diario (spec 002): solo los que NUNCA se resumieron (p. ej.
+    # porque la API falló ese día), sin los de este mismo run y con tope.
+    # Los de versión antigua quedan para el mantenimiento.
+    if solo_sin_resumir:
+        pending = [
+            i for i in pending
+            if i.enriched_version is None and i.id_hash not in (excluir or set())
+        ]
+    if limite is not None:
+        pending = pending[:limite]
     if not pending:
         logger.info("Enricher: no hay items pendientes de enriquecimiento")
         return 0
@@ -323,7 +340,7 @@ def _fetch_body_full(url: str) -> str:
 # Loop interno con tool use
 # ---------------------------------------------------------------------------
 
-def _enrich_one(client, item: Item) -> dict[str, Any]:
+def _enrich_one(client, item: Item, uso: Optional[dict] = None) -> dict[str, Any]:
     """Lanza la conversación con Sonnet hasta obtener el JSON final.
 
     Limita a `MAX_TOOL_ITERATIONS` para que un item no dispare un loop
@@ -337,13 +354,20 @@ def _enrich_one(client, item: Item) -> dict[str, Any]:
     ]
 
     for iteration in range(MAX_TOOL_ITERATIONS):
+        # Caché (spec 002): el sistema y la herramienta se repiten en cada
+        # llamada, y en el bucle cada vuelta reenvía todo lo anterior. Un
+        # marcador en el sistema y otro en el último tool_result hacen que se
+        # cobre al 10 % lo ya enviado. Máximo 4 marcadores: sistema + uno por
+        # vuelta de herramienta (≤ 3 con MAX_TOOL_ITERATIONS = 4).
         resp = client.messages.create(
             model=MODEL,
             max_tokens=MAX_TOKENS,
-            system=SYSTEM_PROMPT,
+            system=[{"type": "text", "text": SYSTEM_PROMPT,
+                     "cache_control": {"type": "ephemeral"}}],
             tools=[FETCH_URL_TOOL],
             messages=messages,
         )
+        _sumar_uso(uso, resp)
 
         if resp.stop_reason == "tool_use":
             # Acumula la respuesta del modelo (incluye tool_use blocks) y
@@ -368,6 +392,7 @@ def _enrich_one(client, item: Item) -> dict[str, Any]:
                 # stop_reason era tool_use pero no había bloques tool_use →
                 # estado inconsistente, abortamos.
                 raise RuntimeError("tool_use sin bloques tool_use")
+            tool_results[-1]["cache_control"] = {"type": "ephemeral"}
             messages.append({"role": "user", "content": tool_results})
             continue
 
@@ -783,3 +808,34 @@ def _coerce_float(v: Any) -> Optional[float]:
         except ValueError:
             return None
     return None
+
+
+# ---------------------------------------------------------------------------
+# Registro de uso (spec 002): tokens por run, para medir el gasto real
+# ---------------------------------------------------------------------------
+
+def _uso_vacio() -> dict:
+    return {"llamadas": 0, "entrada": 0, "salida": 0, "cache_escrita": 0, "cache_leida": 0}
+
+
+def _sumar_uso(uso: Optional[dict], resp) -> None:
+    if uso is None:
+        return
+    uso["llamadas"] += 1
+    u = getattr(resp, "usage", None)
+    if u is None:
+        return
+    uso["entrada"] += getattr(u, "input_tokens", 0) or 0
+    uso["salida"] += getattr(u, "output_tokens", 0) or 0
+    uso["cache_escrita"] += getattr(u, "cache_creation_input_tokens", 0) or 0
+    uso["cache_leida"] += getattr(u, "cache_read_input_tokens", 0) or 0
+
+
+def _log_uso(quien: str, uso: dict) -> None:
+    if not uso["llamadas"]:
+        return
+    logger.info(
+        "%s uso: %d llamadas, entrada %d, salida %d, caché escrita %d, caché leída %d (modelo %s)",
+        quien, uso["llamadas"], uso["entrada"], uso["salida"],
+        uso["cache_escrita"], uso["cache_leida"], MODEL,
+    )

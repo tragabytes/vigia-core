@@ -190,6 +190,12 @@ def _classify_via_llm(
             "content": USER_TEMPLATE.format(diff=diff_text),
         }],
     )
+    u = getattr(msg, "usage", None)
+    if u is not None:  # spec 002: medir el gasto real
+        logger.info(
+            "diff_summarizer uso: entrada %d, salida %d (modelo %s)",
+            getattr(u, "input_tokens", 0) or 0, getattr(u, "output_tokens", 0) or 0, MODEL,
+        )
     raw = "".join(
         block.text for block in msg.content
         if getattr(block, "type", None) == "text"
