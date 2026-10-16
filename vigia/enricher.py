@@ -51,8 +51,17 @@ logger = logging.getLogger(__name__)
 # Configuración del modelo
 # ---------------------------------------------------------------------------
 
-MODEL = "claude-sonnet-4-6"
+MODEL = get_active_profile().enricher_model
+TESTIGO = get_active_profile().enricher_model_testigo
 MAX_TOKENS = 2048
+# Los modelos 5.5 piensan antes de responder: más margen de salida y esfuerzo
+# bajo (banco de prueba del 16/10/2026, spec 002). Sonnet 4.6 va como siempre.
+MAX_TOKENS_CON_ESFUERZO = 8000
+_MODELOS_SIN_ESFUERZO = frozenset({"claude-sonnet-4-6"})
+# Con un modelo nuevo, texto más corto que esto → se descarga la página antes
+# de preguntar: no la abren por su cuenta y se quedaban sin plazo. Sonnet 4.6
+# sí la abre, y con él no se toca nada.
+PRECARGA_CHARS = 500
 MAX_TOOL_ITERATIONS = 4   # tope de loops para evitar runaway costs
 # Cortesía entre descargas de body en el backfill (enrich_pending): espacia
 # las peticiones para no provocar throttling de la fuente (BOE rechazaba la
@@ -149,10 +158,17 @@ def enrich(items: list[Item]) -> list[Item]:
     enriched = 0
     failed = 0
     uso = _uso_vacio()
+    uso_testigo = _uso_vacio()
+    discrepancias = 0
 
     for item in items:
         try:
+            if MODEL not in _MODELOS_SIN_ESFUERZO:
+                _precargar(item)
             data = _enrich_one(client, item, uso)
+            if TESTIGO:
+                data, distinto = _con_testigo(client, item, data, uso_testigo)
+                discrepancias += distinto
             _apply_enrichment(item, data)
             enriched += 1
         except Exception as exc:
@@ -167,7 +183,42 @@ def enrich(items: list[Item]) -> list[Item]:
         enriched, len(items), failed,
     )
     _log_uso("Enricher", uso)
+    if TESTIGO:
+        _log_uso("Testigo", uso_testigo, TESTIGO)
+        logger.info("Testigo: %d discrepancias en %d items", discrepancias, len(items))
     return items
+
+
+def _precargar(item: Item) -> None:
+    """Si el texto del item es corto, le añade el cuerpo de su página."""
+    if item.extra is None:
+        item.extra = {}
+    raw = item.extra.get("raw_text") or ""
+    if len(raw) >= PRECARGA_CHARS:
+        return
+    body = _fetch_body_full(item.url)
+    if body and not body.startswith("ERROR"):
+        item.extra["raw_text"] = f"{raw}\n\n{body}" if raw else body
+
+
+def _con_testigo(client, item: Item, data: dict, uso: dict) -> tuple:
+    """Pasa el item por el testigo. Si el testigo dice SÍ y el modelo NO, manda
+    lo del testigo (no se pierde el aviso). Devuelve (datos, 1 si discrepan)."""
+    try:
+        testigo = _enrich_one(client, item, uso, modelo=TESTIGO)
+    except Exception as exc:
+        logger.warning("Testigo: fallo con [%s] %s: %s", item.source, item.titulo[:60], exc)
+        return data, 0
+    si_modelo = _coerce_bool(data.get("is_relevant")) is True
+    si_testigo = _coerce_bool(testigo.get("is_relevant")) is True
+    if si_modelo == si_testigo:
+        return data, 0
+    logger.warning(
+        "Testigo: %s dice %s y %s dice %s — [%s] %s",
+        MODEL, "SÍ" if si_modelo else "NO", TESTIGO, "SÍ" if si_testigo else "NO",
+        item.source, item.titulo[:80],
+    )
+    return (testigo if si_testigo else data), 1
 
 
 def enrich_pending(
@@ -340,7 +391,8 @@ def _fetch_body_full(url: str) -> str:
 # Loop interno con tool use
 # ---------------------------------------------------------------------------
 
-def _enrich_one(client, item: Item, uso: Optional[dict] = None) -> dict[str, Any]:
+def _enrich_one(client, item: Item, uso: Optional[dict] = None,
+                modelo: Optional[str] = None) -> dict[str, Any]:
     """Lanza la conversación con Sonnet hasta obtener el JSON final.
 
     Limita a `MAX_TOOL_ITERATIONS` para que un item no dispare un loop
@@ -348,6 +400,11 @@ def _enrich_one(client, item: Item, uso: Optional[dict] = None) -> dict[str, Any
     tope, se aborta con excepción y el item queda sin enriquecer (lo
     captura el `try/except` del caller).
     """
+    modelo = modelo or MODEL
+    ajustes: dict[str, Any] = {"max_tokens": MAX_TOKENS}
+    if modelo not in _MODELOS_SIN_ESFUERZO:
+        ajustes = {"max_tokens": MAX_TOKENS_CON_ESFUERZO,
+                   "output_config": {"effort": "low"}}
     user_content = _build_initial_user_content(item)
     messages: list[dict[str, Any]] = [
         {"role": "user", "content": user_content},
@@ -360,8 +417,8 @@ def _enrich_one(client, item: Item, uso: Optional[dict] = None) -> dict[str, Any
         # cobre al 10 % lo ya enviado. Máximo 4 marcadores: sistema + uno por
         # vuelta de herramienta (≤ 3 con MAX_TOOL_ITERATIONS = 4).
         resp = client.messages.create(
-            model=MODEL,
-            max_tokens=MAX_TOKENS,
+            model=modelo,
+            **ajustes,
             system=[{"type": "text", "text": SYSTEM_PROMPT,
                      "cache_control": {"type": "ephemeral"}}],
             tools=[FETCH_URL_TOOL],
@@ -831,11 +888,11 @@ def _sumar_uso(uso: Optional[dict], resp) -> None:
     uso["cache_leida"] += getattr(u, "cache_read_input_tokens", 0) or 0
 
 
-def _log_uso(quien: str, uso: dict) -> None:
+def _log_uso(quien: str, uso: dict, modelo: Optional[str] = None) -> None:
     if not uso["llamadas"]:
         return
     logger.info(
         "%s uso: %d llamadas, entrada %d, salida %d, caché escrita %d, caché leída %d (modelo %s)",
         quien, uso["llamadas"], uso["entrada"], uso["salida"],
-        uso["cache_escrita"], uso["cache_leida"], MODEL,
+        uso["cache_escrita"], uso["cache_leida"], modelo or MODEL,
     )

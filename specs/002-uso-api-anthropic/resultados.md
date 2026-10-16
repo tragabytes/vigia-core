@@ -2,7 +2,7 @@
 
 39 convocatorias reales (16 de enfermería y 23 de docencia), con la respuesta correcta puesta
 por Claude según los criterios de Laureano. Tres rondas en la página de Actions
-(`eval-enricher`). Gasto total: unos 3,4 $.
+(`eval-enricher`), más una cuarta con los criterios nuevos. Gasto total: unos 4,3 $.
 
 ## Relevancia
 
@@ -11,6 +11,7 @@ por Claude según los criterios de Laureano. Tres rondas en la página de Action
 | 1 · como producción, esfuerzo bajo | 35/39 · 1 «no» de más | 34/39 · 4 «no» de más | 35/39 · 1 «no» de más |
 | 2 · esfuerzo medio | — | 36/39 · 2 «no» de más | 35/39 · 1 «no» de más |
 | 3 · con la página descargada de antemano | 33/39 · 3 «no» de más | 33/39 · 5 «no» de más | 33/39 · 3 «no» de más |
+| 4 · con la página descargada y los prompts nuevos (Laureano, 16/10) | 36/39 · 1 «no» de más | — | **37/39 · 0 «no» de más** |
 | **Coste por convocatoria** | **0,021 $** | 0,014 $ | **0,001 $** |
 
 Un «no» de más es lo grave: la convocatoria que debía avisar y no avisa.

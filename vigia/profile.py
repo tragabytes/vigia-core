@@ -79,6 +79,14 @@ class Profile:
         "siguiente al de la publicación", "siguiente al de la publicacion",
     )
 
+    # --- Enricher: modelo (spec 002) ---
+    # `enricher_model_testigo`: si se pone, cada item pasa también por ese
+    # modelo y se avisa si CUALQUIERA de los dos lo ve relevante; las
+    # discrepancias quedan en el log. Sirve para probar un modelo nuevo sin
+    # perder avisos. Vacío = sin testigo.
+    enricher_model: str = "claude-sonnet-4-6"
+    enricher_model_testigo: str = ""
+
 
 # ---------------------------------------------------------------------------
 # Registro del perfil activo (un perfil por proceso)

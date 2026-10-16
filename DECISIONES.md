@@ -76,3 +76,14 @@ Lo decidido por Laureano está en la spec de docencia (alcance, InfoJobs pendien
 | D34 | **Quitado `t.html` del núcleo** (#45): una página que un agente de investigación descargó en la raíz y se coló en el commit de v0.11.0 | No es código ni entra en el paquete | — |
 | D35 | **Bots**: docencia en **v0.14.0**, enfermería en **v0.11.1** (no usa Workday ni Teamtailor; v0.12-v0.14 no le cambian nada) | Subir enfermería a v0.14.0 no aporta nada y sería otro run de CI de 10 min | Subirlo cuando haga falta |
 
+
+## 16/10, noche: modelo del enricher (spec 002)
+
+Laureano decidió (16/10): avisar de los actos de procesos de la especialidad, también de los nombramientos; el «Spanish teacher» de colegios extranjeros cuenta como ELE; y la prueba acotada de Haiku 5.5. Resultados del banco en [`specs/002-uso-api-anthropic/resultados.md`](specs/002-uso-api-anthropic/resultados.md). Lo que decidí yo:
+
+| # | Decisión | Motivo | Cómo se deshace |
+|---|---|---|---|
+| D36 | **La prueba de Haiku 5.5 va en docencia**, no en enfermería | No dijiste en qué bot. En docencia Haiku acertó el caso de Reino Unido que el modelo actual fallaba, y enfermería, que es el bot histórico, se queda igual | Quitar `enricher_model` del perfil de docencia |
+| D37 | **Durante la prueba, Sonnet 4.6 hace de testigo y se avisa si cualquiera de los dos dice SÍ.** Las discrepancias salen en el log (`Testigo: … dice NO y … dice SÍ`) | La prueba no puede costar avisos. Mientras dura, el gasto es el de hoy más un 5 % (Haiku cuesta 1/20) | Quitar `enricher_model_testigo` |
+| D38 | **La página se descarga antes de preguntar solo con los modelos nuevos**, y cuando el texto tiene menos de 500 caracteres | Los modelos nuevos no la abren por su cuenta y perdían el plazo. Con Sonnet 4.6 no se toca nada: él ya la abre, y así enfermería no cambia | `PRECARGA_CHARS` en `vigia/enricher.py` |
+| D39 | **Reetiquetado en el banco: «Lengua española para nativos» en un colegio británico de Barcelona pasa a no relevante** | No es ELE y está fuera de Madrid; en el perfil queda escrito así | Cambiar `relevante` del caso `tes-68822962` |

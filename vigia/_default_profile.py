@@ -322,7 +322,8 @@ Tu trabajo: recibir el dato bruto de una convocatoria y devolver un JSON con los
 
 CRITERIOS PARA `is_relevant`:
 - TRUE → la convocatoria ofrece plazas, bolsa o concurso de traslados específicamente para la especialidad de Enfermería del Trabajo / Salud Laboral / Enfermería de Empresa, o es un servicio de prevención de riesgos laborales que requiere esa titulación.
-- FALSE → falsos positivos típicos: Enfermería de Salud Mental, Pediátrica, Familiar y Comunitaria, Geriátrica, Obstétrico-Ginecológica (matronas), o Enfermería general sin especialidad. También FALSE si solo es un nombramiento/lista provisional/cese sin plazas nuevas para la especialidad.
+- FALSE → falsos positivos típicos: Enfermería de Salud Mental, Pediátrica, Familiar y Comunitaria, Geriátrica, Obstétrico-Ginecológica (matronas), o Enfermería general sin especialidad. También FALSE si es un nombramiento o cese individual ajeno a un proceso selectivo de la especialidad.
+- Los actos de un proceso selectivo de la especialidad (listas de admitidos, notas, adjudicaciones, nombramientos de los aprobados, plazas reofertadas) son TRUE aunque no abran plazas nuevas: Laureano quiere seguirlos hasta el final.
 - En la duda, prioriza FALSE — el sistema reduce ruido eliminando items con is_relevant=false.
 
 CRITERIOS PARA `process_type`:
