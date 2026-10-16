@@ -85,7 +85,9 @@ _PAGE_SIZE = 10
 class SapEmpresa:
     code: str            # "RENFE"
     nombre: str          # "Renfe Operadora"
-    search_url: str      # "https://empleo.renfe.com/search/"
+    search_url: str      # "https://empleo.renfe.com/search/" (puede llevar
+                         # búsqueda: "…/search/?locationsearch=Madrid")
+    palabras: tuple = () # filtro por título; vacío = FAST_KEYWORDS del perfil
 
 
 SAP_EMPRESAS: list[SapEmpresa] = [
@@ -152,7 +154,8 @@ class SapSuccessfactorsSource(Source):
 
         for page in range(_MAX_PAGES):
             startrow = page * _PAGE_SIZE
-            url = f"{emp.search_url}?startrow={startrow}&num={_PAGE_SIZE}"
+            sep = "&" if "?" in emp.search_url else "?"
+            url = f"{emp.search_url}{sep}startrow={startrow}&num={_PAGE_SIZE}"
             try:
                 resp = requests.get(
                     url, headers=self._default_headers(), timeout=20
@@ -187,7 +190,10 @@ class SapSuccessfactorsSource(Source):
         title = anchor.get_text(" ", strip=True)
         if not title:
             return None
-        if not _matches_fast_keywords(title):
+        if emp.palabras:
+            if not any(p in normalize(title) for p in emp.palabras):
+                return None
+        elif not _matches_fast_keywords(title):
             return None
 
         item_url = _resolve_url(anchor["href"], emp.search_url)
