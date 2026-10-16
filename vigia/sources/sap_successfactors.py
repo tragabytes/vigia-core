@@ -8,10 +8,13 @@ activas — sin JavaScript, sin WAF intermedio, sin login. Detectado en el
 research del 2026-04-28 al inspeccionar `/platform/js/search/search.js`
 en sus respuestas.
 
-Empresas cubiertas hoy:
+Empresas por defecto (`SAP_EMPRESAS`, perfil de enfermería):
 - **RENFE** (`empleo.renfe.com`)
 - **Correos** (`empleo.correos.com`)
 - **Navantia** (`empleo.navantia.es`)
+
+Cada perfil puede poner las suyas en `source_params["sap_successfactors"]
+["empresas"]` (docencia: Colegios RC / Highlands).
 
 Estructura HTML compartida:
 - Cada item del listado: `<tr class="data-row">` (Correos) o
@@ -44,6 +47,7 @@ from typing import Optional
 import requests
 
 from vigia.config import FAST_KEYWORDS, normalize
+from vigia.profile import get_active_profile
 from vigia.sources.base import RawItem, Source
 
 logger = logging.getLogger(__name__)
@@ -102,22 +106,40 @@ SAP_EMPRESAS: list[SapEmpresa] = [
 ]
 
 
+def _sap_empresas() -> list[SapEmpresa]:
+    """Empresas del perfil activo (`source_params["sap_successfactors"]
+    ["empresas"]`); sin ellas, las de siempre (`SAP_EMPRESAS`). Se lee en
+    runtime para que cada bot elija sus portales."""
+    params = get_active_profile().source_params.get("sap_successfactors", {})
+    return list(params.get("empresas", SAP_EMPRESAS))
+
+
 class SapSuccessfactorsSource(Source):
     name = "sap_successfactors"
     probe_url = "https://empleo.renfe.com/search/"
 
     def probe_content_count(self) -> int:
-        # Valida el render de la instancia SuccessFactors de `probe_url`.
-        return self._probe_count_selector(self.probe_url, "tr.data-row, div.job")
+        # Cuenta el listado de CADA empresa y devuelve el mínimo: un portal
+        # roto no queda tapado por los demás. `probe_url` solo es uno de ellos,
+        # así que se anota cuál está vacío (ver `Source.probe`).
+        counts = {
+            emp.search_url: self._probe_count_selector(
+                emp.search_url, "tr.data-row, div.job"
+            )
+            for emp in _sap_empresas()
+        }
+        self.probe_empty_listings = [u for u, n in counts.items() if n == 0]
+        return min(counts.values()) if counts else 0
 
     def fetch(self, since_date: date) -> list[RawItem]:
+        empresas = _sap_empresas()
         all_items: list[RawItem] = []
-        for emp in SAP_EMPRESAS:
+        for emp in empresas:
             items = self._fetch_empresa(emp, since_date)
             all_items.extend(items)
         logger.info(
             "SAP SuccessFactors: %d items relevantes (%d empresas)",
-            len(all_items), len(SAP_EMPRESAS),
+            len(all_items), len(empresas),
         )
         return all_items
 

@@ -310,3 +310,58 @@ class TestProbe:
     def test_probe_url_apunta_a_renfe_search(self):
         source = SapSuccessfactorsSource()
         assert source.probe_url == "https://empleo.renfe.com/search/"
+
+
+# ---------------------------------------------------------------------------
+# Empresas por perfil (vigia-docencia: Colegios RC / Highlands, 16/10/2026)
+# ---------------------------------------------------------------------------
+
+import dataclasses
+from contextlib import contextmanager
+
+from vigia import profile as profile_mod
+from vigia._default_profile import DEFAULT
+
+
+@contextmanager
+def _con_empresas(empresas):
+    profile_mod.set_active_profile(dataclasses.replace(
+        DEFAULT, source_params={"sap_successfactors": {"empresas": empresas}},
+    ))
+    try:
+        yield
+    finally:
+        profile_mod.set_active_profile(None)
+
+
+class TestEmpresasPorPerfil:
+    """Fallo que impide: la lista de empresas estaba fijada en el código
+    (RENFE, Correos, Navantia) y otro bot no podía usar el lector para sus
+    portales SuccessFactors (docencia: Colegios RC)."""
+
+    RC = SapEmpresa("RC", "Colegios RC", "https://empleo.colegiosrc.es/search/")
+
+    def test_el_perfil_elige_las_empresas(self):
+        vacia = MagicMock(text="<html></html>", status_code=200)
+        vacia.raise_for_status = lambda: None
+        with _con_empresas([self.RC]), patch.object(
+            sap_successfactors.requests, "get", return_value=vacia,
+        ) as get:
+            SapSuccessfactorsSource().fetch(since_date=date(2026, 1, 1))
+        urls = {c.args[0].split("?")[0] for c in get.call_args_list}
+        assert urls == {"https://empleo.colegiosrc.es/search/"}
+
+    def test_sin_empresas_en_el_perfil_sigue_con_las_de_siempre(self):
+        assert [e.code for e in sap_successfactors._sap_empresas()] == [
+            "RENFE", "CORREOS", "NAVANTIA"]
+
+    def test_probe_cuenta_cada_empresa_y_dice_cual_esta_vacia(self):
+        def contar(url, css, exclude_classes=()):
+            return 0 if "colegiosrc" in url else 7
+
+        otra = SapEmpresa("X", "X", "https://empleo.x.es/search/")
+        with _con_empresas([self.RC, otra]):
+            s = SapSuccessfactorsSource()
+            with patch.object(s, "_probe_count_selector", side_effect=contar):
+                assert s.probe_content_count() == 0
+            assert s.probe_empty_listings == ["https://empleo.colegiosrc.es/search/"]
