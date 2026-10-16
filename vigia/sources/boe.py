@@ -58,6 +58,19 @@ BOE_SUMARIO_URL = "https://boe.es/datosabiertos/api/boe/sumario/{fecha}"
 # Secciones que pueden contener convocatorias de oposiciones/concursos
 SECTIONS_TO_FETCH_BODY = {"2B", "2A", "3"}
 
+# Universidades: en el BOE todas salen bajo el departamento "Universidades"
+# y sus convocatorias de personal llevan títulos genéricos. Abrir todas
+# arrastraría el profesorado de toda España a diario; solo se abren las de
+# personal NO docente, reconocidas por el título. Caso real perdido:
+# BOE-A-2024-18785 (UPM, plaza de Enfermería del Trabajo). Override por
+# perfil: `source_params["boe"]["univ_staff_title_keywords"]`.
+UNIV_STAFF_TITLE_KEYWORDS = [
+    "personal laboral",
+    "administracion y servicios",
+    "ptgas",
+    "escala",
+]
+
 # Departamentos relevantes (minúsculas, sin tildes) que justifican descargar
 # el HTML del cuerpo para buscar la especialidad. La cobertura de
 # "administracion local" ya engloba los ayuntamientos grandes de Madrid
@@ -280,6 +293,11 @@ class BOESource(Source):
         # ¿Vale la pena descargar el body?
         dept_norm = normalize(dept_name)
         is_relevant_dept = any(kw in dept_norm for kw in dept_keywords)
+        if not is_relevant_dept and "universidad" in dept_norm:
+            univ_kw = params.get(
+                "univ_staff_title_keywords", UNIV_STAFF_TITLE_KEYWORDS
+            )
+            is_relevant_dept = any(kw in titulo_norm for kw in univ_kw)
         should_fetch_body = (
             sec_code in SECTIONS_TO_FETCH_BODY
             and (is_relevant_dept or has_fast_kw)
