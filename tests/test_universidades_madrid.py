@@ -429,6 +429,50 @@ class TestUahBolsa:
         uah_items = [it for it in items if it.extra.get("uni") == "UAH"]
         assert any("Enfermería del Trabajo" in it.title for it in uah_items)
 
+    def test_lee_las_ofertas_de_los_desplegables_plegados(self):
+        """Fallo que impide: dar por perdidas (o dejar de leer) las ofertas que
+        la web enseña dentro de un desplegable cerrado. Estructura real del
+        19/10/2026: cada grupo es un `u-accordion__body` plegado por CSS, con
+        el listado completo ya en el HTML; la bolsa de Enfermería del Trabajo
+        va en el del grupo B1."""
+        html = """
+        <html><body>
+          <div class="u-accordion" id="accordion-grupos-laborales">
+            <div class="u-accordion__body collapse">
+              <div class="element parent list sg-solrlist" id="solrlist-solrlistLaboralB1">
+                <div class="panel panel-grey"><div class="panel-heading"></div>
+                  <div class="panel-body">
+                    <ul class="list-unstyled main-ul"><li><article>
+                      <h4 class="title-element">
+                        <a href="/export/sites/nuevauah/es/empleo-publico/PAS/.galleries/Laboral/PAS-Laboral-Bolsa-de-empleo/B1-Enfermeria-03.09.2020.pdf"
+                           title="Enfermería del Trabajo">Enfermería del Trabajo</a>
+                      </h4>
+                      <div class="description"></div>
+                    </article></li></ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="u-accordion__body collapse">
+              <div class="element parent list sg-solrlist" id="solrlist-solrlistLaboralC2">
+                <div class="panel panel-grey"><div class="panel-body">
+                  <ul class="list-unstyled main-ul">
+                    <div class="alert alert-warning">Actualmente no hay información</div>
+                  </ul>
+                </div></div>
+              </div>
+            </div>
+          </div>
+        </body></html>
+        """
+        source = UniversidadesMadridSource()
+        with self._patch_get_bolsa_only(html):
+            items = source.fetch(since_date=date(2000, 1, 1))
+
+        uah = [it for it in items if it.extra.get("uni") == "UAH"]
+        assert [it.title for it in uah] == ["Enfermería del Trabajo"]
+        assert uah[0].date == date(2020, 9, 3)
+
 
 # ---------------------------------------------------------------------------
 # UAM — `<div class="uam-card">` ENVUELTO por un `<a>` a la página de detalle
