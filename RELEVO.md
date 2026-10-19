@@ -13,7 +13,7 @@ Lee, por este orden:
 4. `MANTENIMIENTO.md`, según lo que toque.
 
 **Estado (19/10).**
-- Núcleo en **v0.16.1**, con los dos bots pineados a esa versión. La v0.16.1 arregla los mensajes de Telegram que se partían a mitad de etiqueta: el 19/10 docencia perdió 3 de 6 trozos (38 novedades). Ventana de 3 días desde v0.9.0 (D22).
+- Núcleo en **v0.16.2**, con los dos bots pineados a esa versión. La v0.16.2 hace que el probe de Workday mire la página del portal (la raíz del dominio da 406 siempre). La v0.16.1 arregla los mensajes de Telegram que se partían a mitad de etiqueta: el 19/10 docencia perdió 3 de 6 trozos (38 novedades). Ventana de 3 días desde v0.9.0 (D22).
 - Uso de la API (spec 002): el gasto queda en el log de cada run (`Enricher uso:`) y se reintentan las convocatorias que se quedaron sin resumir (v0.15.0). **Docencia prueba Haiku 5.5 hasta el 30/10** con Sonnet 4.6 de testigo (D36-D38): cada lunes hay que buscar `Testigo:` en el log del daily.
 - Docencia lee 10 fuentes nuevas desde el 16/10 (spec 001 de docencia, D28-D33). Su relevo dice qué comprobar el lunes 19/10.
 - Los tres repos trabajan con la forma de temario-eir.
@@ -22,7 +22,7 @@ Lee, por este orden:
 - Los dos: `since_date=2026-10-14` (lunes, menos 5) y `caché leída` > 0. ePreselec con sus 3 empresas y sin anti-robots.
 - Enfermería: el enricher reintenta cada día una oferta de abril del Canal de Isabel II (CODEM, enlace genérico `Canales/Ficha.aspx`, sin página que leer) y falla con «loop excedió 4 iteraciones». Gasta unas 4 llamadas al día. Sin decidir si se deja de reintentar tras N fallos.
 - Docencia, testigo: 7 veces Haiku dijo SÍ y Sonnet NO (puestos universitarios y colegios fuera de España) y 1 vez Haiku NO y Sonnet SÍ (panel de expertos de las EOI de Ceuta y Melilla, solo para funcionarios y con el plazo ya cerrado). Laureano decide si esto último cuenta para abandonar la prueba.
-- Docencia: Colejobs da 403 y el probe de Workday 406, con issue de salud abierta. Se investiga en una sesión aparte.
+- Docencia: el probe de Workday daba 406 (arreglado en v0.16.2) y Colejobs da 403 desde GitHub, con issue de salud abierta. Lo de Colejobs (desactivarla o darle una semana) está en el `RELEVO.md` de docencia, pendiente de Laureano.
 
 **Por comprobar** (los puntos 1-5 ya salieron bien el 15/10; se dejan como lista de qué mirar si algo vuelve a fallar) (cómo: `MANTENIMIENTO.md` §3):
 1. **UAH (v0.8.4)**: el probe de `universidades_madrid` debe salir `ok` en vigia-enfermeria. Si sale `error`, el aviso ya dirá qué listado está vacío.
