@@ -72,8 +72,10 @@ class WorkdaySource(Source):
 
     @property
     def probe_url(self) -> str:  # type: ignore[override]
+        # La página del portal, no la raíz del dominio: Workday contesta la
+        # raíz con 406 aunque el portal funcione (daily de docencia, 19/10/2026).
         portales = _portales()
-        return portales[0].url_base if portales else "https://www.myworkday.com"
+        return f"{portales[0].url_base}/{portales[0].site}" if portales else "https://www.myworkday.com"
 
     def probe_content_count(self) -> int:
         counts = {}

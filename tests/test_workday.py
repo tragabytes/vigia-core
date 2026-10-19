@@ -6,7 +6,9 @@ Fallos que impiden:
 - leer las 800 ofertas globales de ISP cada día: se para al salir de la ventana;
 - fechas relativas mal convertidas ("Posted 30+ Days Ago" dentro de la ventana);
 - ofertas sin `locationsText` rompiendo el lector (pasa en CEU);
-- un portal roto tapado por otro en el probe.
+- un portal roto tapado por otro en el probe;
+- el probe en rojo a diario por mirar la raíz del dominio, que Workday
+  contesta con 406 (daily de docencia del 19/10/2026).
 """
 from __future__ import annotations
 
@@ -117,3 +119,22 @@ def test_para_al_llegar_al_total_y_no_repite():
         items = WorkdaySource().fetch(since_date=HOY - timedelta(days=3))
     assert post.call_count == 1
     assert len(items) == 4
+
+
+def test_probe_mira_el_portal_y_no_la_raiz_del_dominio():
+    """Daily de docencia del 19/10/2026: el probe daba 406 Not Acceptable en
+    https://ceu.wd3.myworkdayjobs.com (también desde local) mientras la
+    lectura iba bien. Workday solo sirve la página del portal (`/COL`)."""
+    def http(url, **kw):
+        r = MagicMock(status_code=406 if url.rstrip("/").endswith(".com") else 200,
+                      reason="Not Acceptable")
+        return r
+
+    with _con_portales([CEU]), \
+            patch("vigia.sources.base.requests.head", side_effect=http), \
+            patch("vigia.sources.base.requests.get", side_effect=http), \
+            patch.object(workday.requests, "post",
+                         return_value=_resp([_o("Historia", "Posted Today", "/job/a")])):
+        s = WorkdaySource()
+        assert s.probe_url == "https://ceu.wd3.myworkdayjobs.com/COL"
+        assert s.probe()["status"] == "ok"
