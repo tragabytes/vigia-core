@@ -122,3 +122,34 @@ def test_envio_correcto_queda_en_el_log(monkeypatch, caplog):
         notifier._send_chunk("hola")
 
     assert "Telegram: mensaje enviado a 2/2 destinatarios" in caplog.text
+
+
+def test_mensaje_largo_se_parte_sin_romper_etiquetas():
+    """Fallo que impide: el 19/10/2026 docencia tuvo 38 novedades; el mensaje
+    se partía cada 4096 caracteres exactos, a veces dentro de un `<b>…</b>`,
+    y Telegram rechazó 3 de los 6 trozos («can't parse entities»): esos
+    avisos no llegaron."""
+    import re
+    from vigia.notifier import MAX_MESSAGE_LEN, _build_message, _split
+
+    items = []
+    for i in range(38):
+        item = _make_item(
+            source="todoele",
+            titulo=f"Profesor/a de ELE nº {i} — sustitución & tardes",
+            organismo="Academia <Madrid>",
+        )
+        item.summary = "Plaza de profesor de español como lengua extranjera. " * 4
+        items.append(item)
+    message = _build_message(items, [], date(2026, 10, 19))
+    assert len(message) > 2 * MAX_MESSAGE_LEN  # el caso necesita varios trozos
+
+    chunks = _split(message)
+    for chunk in chunks:
+        assert len(chunk) <= MAX_MESSAGE_LEN
+        for tag in ("b", "i"):
+            assert chunk.count(f"<{tag}>") == chunk.count(f"</{tag}>")
+        assert not re.search(r"&[a-z]*$", chunk)  # entidad partida
+    juntos = "".join(chunks)
+    for i in range(38):
+        assert f"Profesor/a de ELE nº {i} " in juntos

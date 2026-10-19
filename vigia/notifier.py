@@ -303,13 +303,35 @@ def _escape(text: str) -> str:
 
 
 def _split(text: str) -> list[str]:
-    """Divide el mensaje en trozos que no superen el límite de Telegram."""
+    """Divide el mensaje en trozos que no superen el límite de Telegram.
+
+    Corta entre avisos (líneas en blanco) y, si un aviso no cabe solo, entre
+    líneas: cada `<b>…</b>` o `<i>…</i>` va en una línea, así que ningún trozo
+    queda con una etiqueta abierta. Cortar por posición fija la partía y
+    Telegram rechazaba el trozo entero (docencia, 19/10/2026). Solo una línea
+    que no quepa sola se corta a pelo, como antes.
+    """
     if len(text) <= MAX_MESSAGE_LEN:
         return [text]
-    chunks = []
-    while text:
-        chunks.append(text[:MAX_MESSAGE_LEN])
-        text = text[MAX_MESSAGE_LEN:]
+    chunks: list[str] = []
+    current = ""
+    for block in text.split("\n\n"):
+        pieces = [block]
+        if len(block) > MAX_MESSAGE_LEN:
+            pieces = block.split("\n")
+        for piece in pieces:
+            sep = "\n\n" if piece is block else "\n"
+            if current and len(current) + len(sep) + len(piece) <= MAX_MESSAGE_LEN:
+                current += sep + piece
+                continue
+            if current:
+                chunks.append(current)
+            while len(piece) > MAX_MESSAGE_LEN:
+                chunks.append(piece[:MAX_MESSAGE_LEN])
+                piece = piece[MAX_MESSAGE_LEN:]
+            current = piece
+    if current:
+        chunks.append(current)
     return chunks
 
 
