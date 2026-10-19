@@ -130,7 +130,10 @@ def test_probe_mira_el_portal_y_no_la_raiz_del_dominio():
                       reason="Not Acceptable")
         return r
 
-    with _con_portales([CEU]),             patch("vigia.sources.base.requests.head", side_effect=http),             patch("vigia.sources.base.requests.get", side_effect=http),             patch.object(workday.requests, "post",
+    with _con_portales([CEU]), \
+            patch("vigia.sources.base.requests.head", side_effect=http), \
+            patch("vigia.sources.base.requests.get", side_effect=http), \
+            patch.object(workday.requests, "post",
                          return_value=_resp([_o("Historia", "Posted Today", "/job/a")])):
         s = WorkdaySource()
         assert s.probe_url == "https://ceu.wd3.myworkdayjobs.com/COL"
