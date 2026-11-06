@@ -87,3 +87,9 @@ Laureano decidió (16/10): avisar de los actos de procesos de la especialidad, t
 | D37 | **Durante la prueba, Sonnet 4.6 hace de testigo y se avisa si cualquiera de los dos dice SÍ.** Las discrepancias salen en el log (`Testigo: … dice NO y … dice SÍ`) | La prueba no puede costar avisos. Mientras dura, el gasto es el de hoy más un 5 % (Haiku cuesta 1/20) | Quitar `enricher_model_testigo` |
 | D38 | **La página se descarga antes de preguntar solo con los modelos nuevos**, y cuando el texto tiene menos de 500 caracteres | Los modelos nuevos no la abren por su cuenta y perdían el plazo. Con Sonnet 4.6 no se toca nada: él ya la abre, y así enfermería no cambia | `PRECARGA_CHARS` en `vigia/enricher.py` |
 | D39 | **Reetiquetado en el banco: «Lengua española para nativos» en un colegio británico de Barcelona pasa a no relevante** | No es ELE y está fuera de Madrid; en el perfil queda escrito así | Cambiar `relevante` del caso `tes-68822962` |
+
+## 6/11: Colejobs y Workday en docencia
+
+| # | Decisión | Motivo | Cómo se deshace |
+|---|---|---|---|
+| D40 | **Workday: el probe mira la página del portal (`/COL`), no la raíz** (v0.16.2, #63). **Colejobs desactivada en docencia** (opción A de Laureano, 6/11; docencia#54) | La raíz de Workday da 406 a cualquiera, también desde local; la lectura iba bien. Colejobs: Cloudflare da 403 a los servidores de GitHub desde el primer daily real (19/10), con 200 desde local: las medidas del 16/10 se hicieron en local y nunca habían visto el bloqueo | Workday: revertir #63. Colejobs: añadir `"colejobs"` a `sources_enabled` en `vigia_docencia/profile.py` y quitar su test (solo si deja de bloquear a GitHub) |
