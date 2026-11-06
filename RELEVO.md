@@ -36,9 +36,3 @@ Lee, por este orden:
 1. **v0.9.0**: en el primer daily, `since_date` debe ser hoy menos 3 (lunes: menos 5) y no deben llegar avisos de cosas ya vistas.
 2. **v0.10.0**: `epreselec … 3 empresas` sin `bloqueado por el anti-robots`; si sale a diario, añadir una pausa entre empresas (D25).
 3. Pendientes de cada bot en su `RELEVO.md`.
-
-## 6/11: Colejobs y Workday en docencia
-
-| # | Decisión | Motivo | Cómo se deshace |
-|---|---|---|---|
-| D40 | **Workday: el probe mira la página del portal (`/COL`), no la raíz** (v0.16.2, #63). **Colejobs desactivada en docencia** (opción A de Laureano, 6/11; docencia#54) | La raíz de Workday da 406 a cualquiera, también desde local; la lectura iba bien. Colejobs: Cloudflare da 403 a los servidores de GitHub desde el primer daily real (19/10), con 200 desde local: las medidas del 16/10 se hicieron en local y nunca habían visto el bloqueo | Workday: revertir #63. Colejobs: añadir `"colejobs"` a `sources_enabled` en `vigia_docencia/profile.py` y quitar su test (solo si deja de bloquear a GitHub) |
